@@ -12,6 +12,7 @@ pipeline* pipeline_objects;
 
 
 
+
 int main (int argc, char* argv[])
 {
 	
@@ -78,7 +79,7 @@ int main (int argc, char* argv[])
 	///////////////////////Assigning memory to the Issue Queue///////////////////////
 	IQ = new int*[params.iq_size];
 	for(int i=0;i<params.iq_size;i++)
-		IQ[i] = new int[7];                               //[][0] valid;[][1] age, [][2]dst tag, rs1 rdy, rs1 tag/value,rs2 rdy, rs2 tag/value 
+		IQ[i] = new int[12];                               //[][0] valid;[][1] age, [][2]dst tag, rs1 rdy, rs1 tag/value,rs2 rdy, rs2 tag/value , src1_og, src2_og, dest_og, op_type, no_cycles_in_iq
 	IQ_size = params.iq_size;
 
 	////////////////////////////////////////////////////////////////////////////////	
@@ -89,6 +90,21 @@ int main (int argc, char* argv[])
 		RMT_valid_array[i] = 0;                                 //Setting all valid bits to zero
 	
 	/////////////////////////////////////////////////////////////////////////////////
+	
+	/////////////////////Assigning memory to the writeback buffer//////////////////////
+	
+	WriteBack_buffer = new int[WIDTH*5];                                       //Because WIDTH*5 is the maximum number of instructions that can finish in a given cycle
+	
+	/////////////////////////////////////////////////////////////////////////
+	
+	///////////////////Assigning memory to the execute list////////////////////////
+	for(int i = 0;i<WIDTH;i++)
+	{
+		pipeline_objects[i].execute_list_free_entry_pointer = 0;
+		pipeline_objects[i].execute_list = new int*[5];                     //Becuase we can have 5 instructions at a time in the execute list
+		for(int j=0;j<5;j++)
+			pipeline_objects[i].execute_list[j] = new int[6];                   //0:src1,1:src2,2:dest,3:op_type,4:no_cyles_in_exe,5:completed?
+	}
 	
 	
 	///////////////////////Main Loop////////////////////////////////////////////////
@@ -164,8 +180,9 @@ void Rename()
 			{
 				RMT_tag[pipeline_objects[i].dest_decode_rename] = 1000 + ROB_tail_pointer + ROB_tail_phase;
 				RMT_valid_array[pipeline_objects[i].dest_decode_rename] = 1;
+				pipeline_objects[i].dest_decode_rename = 1000 + ROB_tail_pointer + ROB_tail_phase;
 			}
-			else{
+			else{                                                                                             //For branch instruction
 				RMT_tag[pipeline_objects[i].dest_decode_rename] = pipeline_objects[i].dest_decode_rename;
 				RMT_valid_array[pipeline_objects[i].dest_decode_rename] = 0;
 			}
@@ -173,10 +190,16 @@ void Rename()
 			
 			///////////Renaming the source registers///////////////////////////////
 			if((pipeline_objects[i].src1_decode_rename != -1)&&(RMT_valid_array[pipeline_objects[i].src1_decode_rename]))
-				pipeline_objects[i].src1_decode_rename = RMT_tag[pipeline_objects[i].src1_decode_rename];
+				pipeline_objects[i].src1_rename_rr = RMT_tag[pipeline_objects[i].src1_decode_rename];
+			else
+				pipeline_objects[i].src1_rename_rr = pipeline_objects[i].src1_decode_rename;
 			
 			if((pipeline_objects[i].src2_decode_rename != -1)&&(RMT_valid_array[pipeline_objects[i].src2_decode_rename]))
-				pipeline_objects[i].src2_decode_rename = RMT_tag[pipeline_objects[i].src2_decode_rename];
+				pipeline_objects[i].src2_rename_rr = RMT_tag[pipeline_objects[i].src2_decode_rename];
+			else
+				pipeline_objects[i].src2_rename_rr = pipeline_objects[i].src2_decode_rename;
+			
+			
 					
 			
 		}
@@ -199,6 +222,32 @@ void Rename()
 ///////////////////////////Advance_Cycle/////////////////////////
 int Advance_Cycle(FILE *FP)
 {
+	
+	/////////////////////////Rename-RegRead///////////////////////////////
+	if(rr_can_accept_new_bundle)
+	{
+		for(int i=0;i<WIDTH;i++)
+		{
+			pipeline_objects[i].src1_og_rename_rr = pipeline_objects[i].src1_og_decode_rename;
+			pipeline_objects[i].src2_og_rename_rr = pipeline_objects[i].src2_og_decode_rename;
+			pipeline_objects[i].dest_og_rename_rr = pipeline_objects[i].dest_og_decode_rename;
+			
+			pipeline_objects[i].dest_rename_rr = pipeline_objects[i].dest_decode_rename;
+			pipeline_objects[i].op_type_rename_rr = pipeline_objects[i].op_type_decode_rename;
+		}
+	}
+	else
+	{
+		for(int i=0;i<WIDTH;i++)
+		{
+			pipeline_objects[i].no_clk_rename += 1;
+		}
+	}
+	
+	/////////////////////////////////////////////////////////////////////////
+	
+	
+		
 	/////////////////////////Decode-Rename////////////////////////////////
 	if(rename_can_accept_new_bundle)
 	{
@@ -210,6 +259,11 @@ int Advance_Cycle(FILE *FP)
 			pipeline_objects[i].src2_decode_rename = pipeline_objects[i].src2_fetch_decode;
 			pipeline_objects[i].dest_decode_rename = pipeline_objects[i].dest_fetch_decode;
 			pipeline_objects[i].op_type_decode_rename = pipeline_objects[i].op_type_fetch_decode;
+			
+			pipeline_objects[i].src1_og_decode_rename = pipeline_objects[i].src1_fetch_decode;                    //Storing the original reg names
+			pipeline_objects[i].src2_og_decode_rename = pipeline_objects[i].src2_fetch_decode;
+			pipeline_objects[i].dest_og_decode_rename = pipeline_objects[i].dest_fetch_decode;
+			
 			
 		}
 		decode_can_accept_new_bundle = 1;
@@ -231,6 +285,7 @@ int Advance_Cycle(FILE *FP)
 	{
 	if(fscanf(FP, "%lx %d %d %d %d", &pc, &op_type, &dest, &src1, &src2) != EOF)
 		{
+		INST_FETCH_CNT += 1;
 		pipeline_objects[i].src1_fetch_decode = src1;
 		pipeline_objects[i].src2_fetch_decode = src2;
 		pipeline_objects[i].dest_fetch_decode = dest;
@@ -253,7 +308,10 @@ int Advance_Cycle(FILE *FP)
 	}
 	//////////////////////////////////////////////////////////////
 	
-	return 1;
+	if(INST_FETCH_CNT == INST_RETIRE_CNT)
+		return 0;
+	else
+		return 1;
 }
 
 /////////////////////////////////////////////////////////////////////
@@ -268,10 +326,153 @@ void Decode()
 
 void Writeback() {}
 
-void Execute() {}
+void Execute() {
+	
+}
+//////////////////////////////////////////////////////////////////////////////////////////////
+void Issue() {
+	int oldest =0;
+	int number_of_issued_inst = 0;
+	if(execute_list_has_space){
+		for(int k=0;k<IQ_size;k++){                                                                //Trying to isse upto WIDTH instruction
+			if(number_of_issued_inst > WIDTH)
+				break;
+			for(int j=0;j<IQ_size;j++)
+			{
+				oldest = j;
+				if((IQ[j][0] == 1)&&(IQ[j][0] == oldest) && (IQ[j][3]) && (IQ[j][5]))                  //THen issue it to the execute list
+				{
+					pipeline_objects[i].execute_list[pipeline_objects[i].execute_list_free_entry_pointer][
+					number_of_issued_inst += 1;
+					IQ_entry_pointer = IQ_entry_pointer - -1;                                         //Reducing the pointer and age for new isnt
+					youngest -= 1;
+					for(int k=(j+1);k<(IQ_size);k++)                                                             //reducin the age of the instructions older than issued inst
+						IQ[k][1] = IQ[k][1] - 1;
+					for(int k =j;k<(IQ_size-1);k++)                                                         //Moving up the issue queue
+					{
+						IQ[k][0] = IQ[k+1][0];
+						IQ[k][1] = IQ[k+1][1];
+						IQ[k][2] = IQ[k+1][2];
+						IQ[k][3] = IQ[k+1][3];
+						IQ[k][4] = IQ[k+1][4];
+						IQ[k][5] = IQ[k+1][5];
+						IQ[k][6] = IQ[k+1][0];
+					}
+					IQ[IQ_size-2][0] = IQ[IQ_size-1][0];                         //Moving the issue queue up for the last element
+					IQ[IQ_size-2][1] = IQ[IQ_size-1][1];
+					IQ[IQ_size-2][2] = IQ[IQ_size-1][2];
+					IQ[IQ_size-2][3] = IQ[IQ_size-1][3];
+					IQ[IQ_size-2][4] = IQ[IQ_size-1][4];
+					IQ[IQ_size-2][5] = IQ[IQ_size-1][5];
+					IQ[IQ_size-2][6] = IQ[IQ_size-1][6];
+				}
+			}
+		}
+	}
+	else
+	{
+		for(int i=0;i<IQ_size;i++)
+			IQ[i][11] += 1;
+	}
+}
 
-void Issue() {}
+////////////////////////////////////////////////////////////////////////////////////
+void Dispatch() {
+	for(int i=0;i<WIDTH;i++){
+	if(IQ_entry_pointer < IQ_size)
+	{
+		IQ[IQ_entry_pointer][0] = 1;                                           //Setting valid bit as 1
+		IQ[IQ_entry_pointer][1] = youngest;                                    //setting the age bit
+		youngest += 1;
+		IQ[IQ_entry_pointer][2] = pipeline_objects[i].dest_rr_dispatch;
+		if(pipeline_objects[i].src1_ready)
+			IQ[IQ_entry_pointer][3] = 1;
+		else
+			IQ[IQ_entry_pointer][3] = 0;
+		IQ[IQ_entry_pointer][4] = pipeline_objects[i].src1_rr_dispatch;
+		
+		if(pipeline_objects[i].src2_ready)
+			IQ[IQ_entry_pointer][5] = 1;
+		else
+			IQ[IQ_entry_pointer][5] = 0;
+		
+		IQ[IQ_entry_pointer][6] = pipeline_objects[i].src2_rr_dispatch;
+		
+		IQ_entry_pointer += 1;
+		
+		IQ[IQ_entry_pointer][7] = pipeline_objects[i].src1_og_rr_dispatch;                       //Storing value
+		IQ[IQ_entry_pointer][8] = pipeline_objects[i].src2_og_rr_dispatch;
+		IQ[IQ_entry_pointer][9] = pipeline_objects[i].dest_og_rr_dispatch;
+		IQ[IQ_entry_pointer][10] = pipeline_objects[i].op_type_rr_dispatch;
+	}
+	else
+	{
+		for(int i=0;i<WIDTH;i++)
+			pipeline_objects[i].no_clk_dispatch += 1;
+	}
+	}
+}
 
-void Dispatch() {}
+void RegRead() {
+	
+	if(dispatch_can_accept_new_bundle){
+	for(int i=0;i<WIDTH;i++)
+	{
+		///////////////////////////Source 1/////////////////////////
+		if(pipeline_objects[i].src1_og_rename_rr == -1)
+			pipeline_objects[i].src1_ready = 1;
+		else if(pipeline_objects[i].src1_og_rename_rr >= 1000)
+		{
+			for(int j=ROB_tail_pointer;j>=0;j--)                                  //We have to go in reverse to find the most recent version
+			{
+				if(ROB[j][2] == pipeline_objects[i].src1_og_rename_rr)           //Comparing with original values , can do it with the renamed values also
+				{
+					if(ROB[j][0] == 1)     
+					{
+						if(ROB[j][3] == 1)                                       //Implies that the register is ready
+						{
+							pipeline_objects[i].src1_ready = 1;
+							break;
+						}
+						else{
+							pipeline_objects[i].src1_ready = 0;
+						}
+					}
+				}
+			}
+		}
+		else                                                                      //Means the values are ready in the ARF
+			pipeline_objects[i].src1_ready = 1;  
 
-void RegRead() {}
+
+		//////////////////////////////Source 2///////////////////////////
+		if(pipeline_objects[i].src2_og_rename_rr == -1)
+			pipeline_objects[i].src2_ready = 1;
+		else if(pipeline_objects[i].src2_og_rename_rr >= 1000)
+		{
+			for(int j=ROB_tail_pointer;j>=0;j--)                                  //We have to go in reverse to find the most recent version
+			{
+				if(ROB[j][2] == pipeline_objects[i].src2_og_rename_rr)           //Comparing with original values , can do it with the renamed values also
+				{
+					if(ROB[j][0] == 1)     
+					{
+						if(ROB[j][3] == 1)                                       //Implies that the register is ready
+						{
+							pipeline_objects[i].src2_ready = 1;
+							break;
+						}
+						else{
+							pipeline_objects[i].src2_ready = 0;
+						}
+					}
+				}
+			}
+		}
+		else                                                                      //Means the values are ready in the ARF
+			pipeline_objects[i].src2_ready = 1; 
+	}
+	}
+	else
+		for(int i=0;i<WIDTH;i++)
+			pipeline_objects[i].no_clk_rr += 1;
+}
