@@ -203,11 +203,12 @@ void Rename()
 			{
 				RMT_tag[pipeline_objects[i].dest_decode_rename] = 1000 + ROB_tail_pointer + ROB_tail_phase;
 				RMT_valid_array[pipeline_objects[i].dest_decode_rename] = 1;
-				pipeline_objects[i].dest_decode_rename = 1000 + ROB_tail_pointer + ROB_tail_phase;
+				pipeline_objects[i].dest_rename_rr = 1000 + ROB_tail_pointer + ROB_tail_phase;
 			}
 			else{                                                                                             //For branch instruction
 				RMT_tag[pipeline_objects[i].dest_decode_rename] = pipeline_objects[i].dest_decode_rename;
 				RMT_valid_array[pipeline_objects[i].dest_decode_rename] = 0;
+				pipeline_objects[i].dest_rename_rr = pipeline_objects[i].dest_decode_rename;
 			}
 					
 			
@@ -267,7 +268,7 @@ int Advance_Cycle(FILE *FP)
 			pipeline_objects[i].src2_og_rename_rr = pipeline_objects[i].src2_og_decode_rename;
 			pipeline_objects[i].dest_og_rename_rr = pipeline_objects[i].dest_og_decode_rename;
 			
-			pipeline_objects[i].dest_rename_rr = pipeline_objects[i].dest_decode_rename;
+			//pipeline_objects[i].dest_rename_rr = pipeline_objects[i].dest_decode_rename;
 			pipeline_objects[i].op_type_rename_rr = pipeline_objects[i].op_type_decode_rename;
 			
 			pipeline_objects[i].PC_rename_rr = pipeline_objects[i].PC_decode_rename;
@@ -295,7 +296,7 @@ int Advance_Cycle(FILE *FP)
 		for(int i=0;i<WIDTH;i++)
 		{
 			if(pipeline_objects[i].src1_fetch_decode == -2)
-				break;
+				continue;
 			pipeline_objects[i].src1_decode_rename = pipeline_objects[i].src1_fetch_decode;
 			pipeline_objects[i].src2_decode_rename = pipeline_objects[i].src2_fetch_decode;
 			pipeline_objects[i].dest_decode_rename = pipeline_objects[i].dest_fetch_decode;
@@ -677,14 +678,6 @@ void Issue() {
 			}
 		}
 	}
-	
-	
-	////Printing ISSUE QUEUE//////
-	std::cout<<"\n Printing issue queue";
-	for(int i=0;i<IQ_size;i++)
-		if(IQ[i][0] == 1)
-			std::cout<<"\n dst reg:R"<<IQ[i][1]<<" rs1 rdy:"<<IQ[i][2]<<" rs1 tag:"<<IQ[i][3]<<" rs2 rdy:"<<IQ[i][4]<<" rs2 tag:"<<IQ[i][5];
-
 }
 
 ////////////////////////////////////////////////////////////////////////////////////
@@ -696,9 +689,11 @@ void Dispatch() {
 	
 	for(int i=0;i<WIDTH;i++){
 		
-		if((pipeline_objects[i].src1_fetch_decode == -2)||(pipeline_objects[i].src2_fetch_decode == -2)||(pipeline_objects[i].dest_fetch_decode == -2))
-				continue;
-		if((IQ_size - IQ_entry_pointer + 1) >= WIDTH)                                //Checking if we have enough space for the whole bundle 
+		std::cout<<"\n"<<i<<" "<<"src1 R:"<<pipeline_objects[i].src1_rr_dispatch<<" src2 :R"<<pipeline_objects[i].src2_rr_dispatch<<" dest:R"<<pipeline_objects[i].dest_rr_dispatch;
+		if((pipeline_objects[i].src1_rr_dispatch == -2)||(pipeline_objects[i].src2_rr_dispatch == -2)||(pipeline_objects[i].dest_rr_dispatch == -2))
+			continue;
+		
+		else if((IQ_size - IQ_entry_pointer + 1) >= WIDTH)                                //Checking if we have enough space for the whole bundle 
 		{
 			dispatch_can_accept_new_bundle = 1;
 			
@@ -720,12 +715,12 @@ void Dispatch() {
 			
 			IQ[IQ_entry_pointer][6] = pipeline_objects[i].src2_rr_dispatch;
 			
-			IQ_entry_pointer += 1;
-			
 			IQ[IQ_entry_pointer][7] = pipeline_objects[i].src1_og_rr_dispatch;                       //Storing value
 			IQ[IQ_entry_pointer][8] = pipeline_objects[i].src2_og_rr_dispatch;
 			IQ[IQ_entry_pointer][9] = pipeline_objects[i].dest_og_rr_dispatch;
 			IQ[IQ_entry_pointer][10] = pipeline_objects[i].op_type_rr_dispatch;
+			
+			IQ_entry_pointer += 1;
 		}
 		else
 		{
@@ -736,6 +731,16 @@ void Dispatch() {
 				pipeline_objects[i].no_clk_dispatch += 1;
 		}
 	}
+	
+	
+	////Printing ISSUE QUEUE//////
+	std::cout<<"\n Printing issue queue";
+	//[][0] valid;[][1] age, [][2]dst tag, rs1 rdy, rs1 tag/value,rs2 rdy, rs2 tag/value , src1_og, src2_og, dest_og, op_type, no_cycles_in_iq
+	for(int i=0;i<IQ_size;i++)
+		if(IQ[i][0] == 1){
+			std::cout<<"\n valid:"<<IQ[i][0]<<" age:"<<IQ[i][1]<<" dst tag:"<<IQ[i][2]<<" rs1 rdy:"<<IQ[i][3]<<" rs1 tag:"<<IQ[i][4]<<" rs2 rdy:"<<IQ[i][5]<<" rs2 tag:"<<IQ[i][6];
+			std::cout<<" src_og:R"<<IQ[i][7]<<" src2_og:R"<<IQ[i][8]<<" dest_og:R"<<IQ[i][9]<<" op_type:"<<IQ[i][10]<<" no_cycles:"<<IQ[i][11];
+		}
 }
 
 void RegRead() {
