@@ -15,6 +15,7 @@ int dispatch_can_accept_new_bundle = 1;
 int execute_list_has_space = 1;
 int ROB_can_accpet_new_bundle = 1;
 
+
 ///////////////////////////////////////
 
 
@@ -22,35 +23,37 @@ int ROB_can_accpet_new_bundle = 1;
 typedef struct Pipeline{
 	
 	
-	unsigned int PC;
 	
 	//Register between Fetch and decode stage
 	int src1_fetch_decode, src2_fetch_decode,dest_fetch_decode,op_type_fetch_decode, valid;     //valid is used for the case when we have fetch less than width inst
-	int no_clk_fetch;
+	unsigned int PC_fetch_decode;
+	int no_clk_fetch;                                                                           //Inistead of number of clock cycles 
 	
 	//Register between decode and rename stage
 	int src1_og_decode_rename,src2_og_decode_rename,dest_og_decode_rename,src1_decode_rename, src2_decode_rename,dest_decode_rename,op_type_decode_rename;
-	int no_clk_decode;
+	unsigned int PC_decode_rename;
+	int no_clk_decode, no_clk_in_fetch_dec;
 	
 	//Register between rename and register read stage
 	int src1_og_rename_rr,src2_og_rename_rr,dest_og_rename_rr,src1_rename_rr,src2_rename_rr,dest_rename_rr,op_type_rename_rr;   //rr and rob both should have space for new bundle
-	int no_clk_rename;
+	unsigned int PC_rename_rr;
+	int no_clk_rename, no_clk_in_decode_ren,no_clk_in_fetch_ren;
 	
 	
 	//Register between rr and dispatch
 	int src1_rr_dispatch, src1_value, src2_rr_dispatch, src2_value,dest_rr_dispatch, op_type_rr_dispatch;
 	int src1_og_rr_dispatch,src2_og_rr_dispatch,dest_og_rr_dispatch;
-	int no_clk_rr;
+	int no_clk_rr, no_clk_in_rename_rr,no_clk_in_decode_rr,no_clk_in_fetch_rr;
+	unsigned int PC_rr_dispatch;
 	int src1_ready, src2_ready, dest_ready;
 	
 	//Register between dispatch and issue is the ISSUE QUEUE
+	//[][0] valid;[][1] age, [][2]dst tag, rs1 rdy, rs1 tag/value,rs2 rdy, rs2 tag/value , src1_og, src2_og, dest_og, op_type, no_cycles_in_iq
 	int no_clk_dispatch;
 	
 	
 	//Register between Issue and Execute i.e the execute list
-	//Execute list
-	int **execute_list = nullptr;
-	int execute_list_free_entry_pointer;
+	//Execute list //0:src1,1:src2,2:dest,3:op_type,4:no_cyles_in_exe,5:completed?,6:src1_og,7:src2_og,8:src3_og,9:valid
 	int no_clk_issue;
 	
 	/*int src1_exe1,src2_exe1,dest_exe1,op_type_exe1,no_cyles_in_ex_exe1,completed_exe1;   //We have five because a total of five instructions can be in flight in a given execute stage
@@ -89,9 +92,14 @@ int youngest = 0;
 int RMT_valid_array[67];
 int RMT_tag[67];
 
+//Execute list
+int **execute_list = nullptr;
+	int execute_list_free_entry_pointer;
+
 
 ///////////////Initialising writeback buffer/////////////////////
-int* WriteBack_buffer = nullptr;
+int** WriteBack_buffer = nullptr;
+int writeback_free_entry_pointer;
 ////////////////////////////////////////////////////////////////
 	
 
@@ -115,6 +123,8 @@ void Writeback();
 void Retire();
 
 int Advance_Cycle(FILE*);
+
+void Initialisation_function();
 ////////////////////////////////////////////////////////////////////////////////////////////
 
 
