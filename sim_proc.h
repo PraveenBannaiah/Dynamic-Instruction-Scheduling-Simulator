@@ -39,6 +39,10 @@ typedef struct Pipeline{
 	unsigned int PC_rename_rr;
 	int no_clk_rename, no_clk_in_decode_ren,no_clk_in_fetch_ren;
 	
+	int temp_src1_rename_rr;                   //Because the data was going into rr and dispatch in the same clock cycles
+	int temp_src2_rename_rr;
+	int temp_dest_rename_rr;
+	
 	
 	//Register between rr and dispatch
 	int src1_rr_dispatch, src1_value, src2_rr_dispatch, src2_value,dest_rr_dispatch, op_type_rr_dispatch;

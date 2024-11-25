@@ -9,7 +9,10 @@
 pipeline* pipeline_objects;
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 
+//////////////////////////////////////Temporary signals//////////////////////////////////////////////
 int temp_control_signal = 0;
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+
 
 
 
@@ -74,7 +77,7 @@ int main (int argc, char* argv[])
                                               //Use 10001, 10002 etc as rob tag and when accesing just do index%1000
 	}
 	ROB_size = params.rob_size;
-	
+	ROB_can_accpet_new_bundle = ROB_size;     //For checking rob full conditions
 	////////////////////////////////////////////////////////////////////////////////
 	
 	///////////////////////Assigning memory to the Issue Queue///////////////////////
@@ -145,8 +148,8 @@ void Rename()
 		ROB_tail_phase = 1;
 	
 	
-	if(((ROB_head_pointer + 3) == ROB_tail_pointer) && (ROB_tail_phase == 1))     //ROB is full
-		ROB_can_accpet_new_bundle = 0;
+	//if(((ROB_head_pointer + 3) == ROB_tail_pointer) && (ROB_tail_phase == 1))     //ROB is full
+	//	ROB_can_accpet_new_bundle = 0;
 		
 		
 	if(rr_can_accept_new_bundle && ROB_can_accpet_new_bundle)
@@ -165,14 +168,20 @@ void Rename()
 			
 			///////////Renaming the source registers///////////////////////////////                              //we are renaming first becuase of test case r3 == r3 + r1;
 			if((pipeline_objects[i].src1_decode_rename != -1)&&(RMT_valid_array[pipeline_objects[i].src1_decode_rename]))
-				pipeline_objects[i].src1_rename_rr = RMT_tag[pipeline_objects[i].src1_decode_rename];
+			{
+				
+				pipeline_objects[i].temp_src1_rename_rr = RMT_tag[pipeline_objects[i].src1_decode_rename];
+				
+			}
 			else
-				pipeline_objects[i].src1_rename_rr = pipeline_objects[i].src1_decode_rename;
+			{
+				pipeline_objects[i].temp_src1_rename_rr = pipeline_objects[i].src1_decode_rename;
+			}
 			
 			if((pipeline_objects[i].src2_decode_rename != -1)&&(RMT_valid_array[pipeline_objects[i].src2_decode_rename]))
-				pipeline_objects[i].src2_rename_rr = RMT_tag[pipeline_objects[i].src2_decode_rename];
+				pipeline_objects[i].temp_src2_rename_rr = RMT_tag[pipeline_objects[i].src2_decode_rename];
 			else
-				pipeline_objects[i].src2_rename_rr = pipeline_objects[i].src2_decode_rename;
+				pipeline_objects[i].temp_src2_rename_rr = pipeline_objects[i].src2_decode_rename;
 			/////////////////////////////////////////////////////////////////////////
 				
 			if(pipeline_objects[i].dest_decode_rename == -1)                  //The current Instruction does not have a destination register
@@ -184,7 +193,25 @@ void Rename()
 				ROB[ROB_tail_pointer][0] = 1;
 			}
 			
+			ROB_can_accpet_new_bundle--;                                     //Reflects the number of free entries in the ROb
+			
+			
 			ROB[ROB_tail_pointer][1] = 1000 + ROB_tail_pointer + ROB_tail_phase;
+			
+			///////////Renaming the destination register in RMT///////////////////                   //This block is here because in earlier logic the tail_pointer is updated before assigning 
+			if(pipeline_objects[i].dest_decode_rename != -1)
+			{
+				RMT_tag[pipeline_objects[i].dest_decode_rename] = 1000 + ROB_tail_pointer + ROB_tail_phase;
+				RMT_valid_array[pipeline_objects[i].dest_decode_rename] = 1;
+				pipeline_objects[i].temp_dest_rename_rr = 1000 + ROB_tail_pointer + ROB_tail_phase;
+			}
+			else{                                                                                             //For branch instruction
+				RMT_tag[pipeline_objects[i].dest_decode_rename] = pipeline_objects[i].dest_decode_rename;
+				RMT_valid_array[pipeline_objects[i].dest_decode_rename] = 0;
+				pipeline_objects[i].temp_dest_rename_rr = pipeline_objects[i].dest_decode_rename;
+			}
+			
+			///////////////////////////////////////////////////////////////////////
 			if(pipeline_objects[i].dest_decode_rename == -1)
 				ROB[ROB_tail_pointer][2] = 444;                                         //Can't use -1 because declared as unsigned 
 			else
@@ -197,20 +224,6 @@ void Rename()
 			
 			ROB_tail_pointer += 1;
 			ROB_tail_pointer = ROB_tail_pointer%ROB_size;                         //Because it is a circular FIFO
-			
-			///////////Renaming the destination register in RMT///////////////////
-			if(pipeline_objects[i].dest_decode_rename != -1)
-			{
-				RMT_tag[pipeline_objects[i].dest_decode_rename] = 1000 + ROB_tail_pointer + ROB_tail_phase;
-				RMT_valid_array[pipeline_objects[i].dest_decode_rename] = 1;
-				pipeline_objects[i].dest_rename_rr = 1000 + ROB_tail_pointer + ROB_tail_phase;
-			}
-			else{                                                                                             //For branch instruction
-				RMT_tag[pipeline_objects[i].dest_decode_rename] = pipeline_objects[i].dest_decode_rename;
-				RMT_valid_array[pipeline_objects[i].dest_decode_rename] = 0;
-				pipeline_objects[i].dest_rename_rr = pipeline_objects[i].dest_decode_rename;
-			}
-					
 			
 		}
 		
@@ -252,6 +265,8 @@ int Advance_Cycle(FILE *FP)
 			pipeline_objects[i].op_type_rr_dispatch = pipeline_objects[i].op_type_rename_rr;
 			
 			pipeline_objects[i].PC_rr_dispatch = pipeline_objects[i].PC_rename_rr;
+			
+			std::cout<<"\n DISPATCH lineNo:"<<i<<" op_type:"<<pipeline_objects[i].op_type_rr_dispatch<< " src1:"<< pipeline_objects[i].src1_rr_dispatch;
 		}
 	}
 	else
@@ -268,10 +283,17 @@ int Advance_Cycle(FILE *FP)
 			pipeline_objects[i].src2_og_rename_rr = pipeline_objects[i].src2_og_decode_rename;
 			pipeline_objects[i].dest_og_rename_rr = pipeline_objects[i].dest_og_decode_rename;
 			
+			pipeline_objects[i].dest_rename_rr = pipeline_objects[i].temp_dest_rename_rr;
+			pipeline_objects[i].src1_rename_rr = pipeline_objects[i].temp_src1_rename_rr;
+			pipeline_objects[i].src2_rename_rr = pipeline_objects[i].temp_src2_rename_rr;
+			
+			
 			//pipeline_objects[i].dest_rename_rr = pipeline_objects[i].dest_decode_rename;
 			pipeline_objects[i].op_type_rename_rr = pipeline_objects[i].op_type_decode_rename;
 			
 			pipeline_objects[i].PC_rename_rr = pipeline_objects[i].PC_decode_rename;
+			
+			std::cout<<"\n REGREAD lineNo:"<<i<<" op_type:"<<pipeline_objects[i].op_type_rename_rr<< "src1:"<<pipeline_objects[i].src1_rename_rr;
 		}
 	}
 	else
@@ -359,7 +381,7 @@ int Advance_Cycle(FILE *FP)
 	}
 	//////////////////////////////////////////////////////////////
 	
-	if(temp_control_signal == 10)
+	if(temp_control_signal == 25)
 		return 0;
 	else
 	{
@@ -397,6 +419,8 @@ void Retire()
 			{
 				RMT_valid_array[ROB[ROB_head_pointer][2]] = 0;                     //Invalidating that particular entry
 			}
+			
+			ROB_can_accpet_new_bundle++;                                           //Reflects the number of free entries in the ROB
 			
 			ROB_head_pointer += 1;
 			ROB_head_pointer = ROB_head_pointer%ROB_size;
@@ -690,6 +714,7 @@ void Dispatch() {
 	for(int i=0;i<WIDTH;i++){
 		
 		std::cout<<"\n"<<i<<" "<<"src1 R:"<<pipeline_objects[i].src1_rr_dispatch<<" src2 :R"<<pipeline_objects[i].src2_rr_dispatch<<" dest:R"<<pipeline_objects[i].dest_rr_dispatch;
+		
 		if((pipeline_objects[i].src1_rr_dispatch == -2)||(pipeline_objects[i].src2_rr_dispatch == -2)||(pipeline_objects[i].dest_rr_dispatch == -2))
 			continue;
 		
@@ -841,6 +866,10 @@ void Initialisation_function()
 	pipeline_objects[i].src2_rename_rr = -2;
 	pipeline_objects[i].dest_rename_rr = -2;
 	pipeline_objects[i].op_type_rename_rr = -2;
+	pipeline_objects[i].temp_dest_rename_rr = -2;
+	pipeline_objects[i].temp_src1_rename_rr = -2;
+	pipeline_objects[i].temp_src2_rename_rr = -2;
+	
 	
 	
 	///////rr-dispatch/////////
