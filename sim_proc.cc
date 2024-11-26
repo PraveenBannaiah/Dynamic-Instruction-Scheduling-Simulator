@@ -83,8 +83,8 @@ int main (int argc, char* argv[])
 	///////////////////////Assigning memory to the Issue Queue///////////////////////
 	IQ = new int*[params.iq_size];
 	for(int i=0;i<params.iq_size;i++)
-		IQ[i] = new int[16];                               //[][0] valid;[][1] age, [][2]dst tag, rs1 rdy, rs1 tag/value,rs2 rdy, rs2 tag/value , src1_og, src2_og, dest_og, op_type, no_cycles_in_iq
-	IQ_size = params.iq_size;                               // 12:no_ckl_rr, no_clk_in_rename_rr,no_clk_in_decode_rr,no_clk_in_fetch_rr;
+		IQ[i] = new int[20];                               //[][0] valid;[][1] age, [][2]dst tag, rs1 rdy, rs1 tag/value,rs2 rdy, rs2 tag/value , src1_og, src2_og, dest_og, op_type, no_cycles_in_iq
+	IQ_size = params.iq_size;                               // 12:no_clk_dispatch,13:no_clk_rrd,14:no_clk_rerd,15:no_clk_drerd,16:entry_clk_fdrerd 17:rob_tag;
 
 	////////////////////////////////////////////////////////////////////////////////	
 	
@@ -97,8 +97,8 @@ int main (int argc, char* argv[])
 	
 	/////////////////////Assigning memory to the writeback buffer//////////////////////
 	
-	WriteBack_buffer = new int*[WIDTH*5];                                       //Because WIDTH*5 is the maximum number of instructions that can finish in a given cycle
-	for(int j=0;j<(WIDTH*5);j++)
+	WriteBack_buffer = new int*[WIDTH*8];                                       //Because WIDTH*5 is the maximum number of instructions that can finish in a given cycle
+	for(int j=0;j<(WIDTH*8);j++)
 		WriteBack_buffer[j] = new int[20];                                      //All instructions spend one cycle in Writeback buffer thats why there is no field for it
 	writeback_free_entry_pointer = 0;
 	
@@ -108,8 +108,8 @@ int main (int argc, char* argv[])
 	execute_list_free_entry_pointer = 0;
 	execute_list = new int*[WIDTH*5];                     //Becuase we can have 5 instructions at a time in the execute list
 	for(int j=0;j<(WIDTH*5);j++)
-		execute_list[j] = new int[15];                   //0:src1,1:src2,2:dest,3:op_type,4:no_cyles_in_exe,5:completed?,6:src1_og,7:src2_og,8:src3_og,9:valid
-														 //10: no_clk_iq,no_clk_in_rr,no_clk_in_rename_rr,no_clk_in_decode_rr,no_clk_in_fetch_rr;
+		execute_list[j] = new int[20];                   //0:src1,1:src2,2:dest,3:op_type,4:no_cyles_in_exe,5:completed?,6:src1_og,7:src2_og,8:src3_og,9:valid
+														 //10: no_clk_iq,11:no_clk_dispatch,12:no_clk_rrd,13:no_clk_rerd,14:no_clk_drerd,15:entry_clk_fdrerd,16:rob_tag
 	
 	///////////////////////Main Loop////////////////////////////////////////////////
 	do {
@@ -141,7 +141,7 @@ void Fetch()
 
 void Rename()
 {
-	std::cout<<"\n In rename stage";
+	//std::cout<<"\n In rename stage";
 	
 	
 	if((ROB_head_pointer == ROB_tail_pointer)&&(ROB_tail_phase == 0))        //ROB is empty
@@ -197,6 +197,7 @@ void Rename()
 			
 			
 			ROB[ROB_tail_pointer][1] = 1000 + ROB_tail_pointer + ROB_tail_phase;
+			pipeline_objects[i].ROB_tag_for_this_inst = ROB[ROB_tail_pointer][1];
 			
 			///////////Renaming the destination register in RMT///////////////////                   //This block is here because in earlier logic the tail_pointer is updated before assigning 
 			if(pipeline_objects[i].dest_decode_rename != -1)
@@ -210,6 +211,8 @@ void Rename()
 				RMT_valid_array[pipeline_objects[i].dest_decode_rename] = 0;
 				pipeline_objects[i].temp_dest_rename_rr = pipeline_objects[i].dest_decode_rename;
 			}
+			
+			
 			
 			///////////////////////////////////////////////////////////////////////
 			if(pipeline_objects[i].dest_decode_rename == -1)
@@ -233,7 +236,7 @@ void Rename()
 		rename_can_accept_new_bundle = 0;
 	
 	
-	std::cout<<"\n Printing RMT Contents";
+	/*std::cout<<"\n Printing RMT Contents";
 	for(int i=0;i<67;i++)
 	{
 		if(RMT_valid_array[i] == 1)                                                         //Only printing entries with valid rob tag
@@ -242,7 +245,7 @@ void Rename()
 	
 	std::cout<<"\n Printing ROB Contents";
 	for(int i=0;i<ROB_size;i++)
-		std::cout<<"\n Valid:"<<ROB[i][0]<<" robTag:"<<ROB[i][1]<<" dst:R"<<ROB[i][2]<<" rdy:"<<ROB[i][3]<<" exc:"<<ROB[i][4]<<" mis:"<<ROB[i][5]<<" pc:"<<ROB[i][6];
+		std::cout<<"\n Valid:"<<ROB[i][0]<<" robTag:"<<ROB[i][1]<<" dst:R"<<ROB[i][2]<<" rdy:"<<ROB[i][3]<<" exc:"<<ROB[i][4]<<" mis:"<<ROB[i][5]<<" pc:"<<ROB[i][6];*/
 	
 }
 
@@ -255,7 +258,7 @@ int Advance_Cycle(FILE *FP)
 	/////////////////////////RegRead-Dispatch////////////////////////////
 	if(dispatch_can_accept_new_bundle)
 	{
-		printf("\n Dispatch can accept a new bundle");
+		//printf("\n Dispatch can accept a new bundle");
 		for(int i=0;i<WIDTH;i++)
 		{
 			pipeline_objects[i].src1_rr_dispatch = pipeline_objects[i].src1_rename_rr;
@@ -269,16 +272,22 @@ int Advance_Cycle(FILE *FP)
 			
 			pipeline_objects[i].PC_rr_dispatch = pipeline_objects[i].PC_rename_rr;
 			
-			std::cout<<"\n DISPATCH lineNo:"<<i<<" op_type:"<<pipeline_objects[i].op_type_rr_dispatch<< " src1:"<< pipeline_objects[i].src1_rr_dispatch;
+			//std::cout<<"\n DISPATCH lineNo:"<<i<<" op_type:"<<pipeline_objects[i].op_type_rr_dispatch<< " src1:"<< pipeline_objects[i].src1_rr_dispatch;
+			
+			////////////////////TIMING//////////////////////////////
+			pipeline_objects[i].no_clk_rer = pipeline_objects[i].no_clk_rename;
+			pipeline_objects[i].no_clk_drer = pipeline_objects[i].no_clk_dr;
+			pipeline_objects[i].no_clk_fdrer = pipeline_objects[i].no_clk_fdr;
+			
 		}
 	}
 	else
-		printf("\n Dispatch can not accept a new bundle");
+		//printf("\n Dispatch can not accept a new bundle");
 	
 	/////////////////////////Rename-RegRead///////////////////////////////
 	if(rr_can_accept_new_bundle)
 	{
-		printf("\n RR can accept a new bundle");
+		//printf("\n RR can accept a new bundle");
 		
 		for(int i=0;i<WIDTH;i++)
 		{
@@ -296,12 +305,19 @@ int Advance_Cycle(FILE *FP)
 			
 			pipeline_objects[i].PC_rename_rr = pipeline_objects[i].PC_decode_rename;
 			
-			std::cout<<"\n REGREAD lineNo:"<<i<<" op_type:"<<pipeline_objects[i].op_type_rename_rr<< "src1:"<<pipeline_objects[i].src1_rename_rr;
+			//std::cout<<"\n REGREAD lineNo:"<<i<<" op_type:"<<pipeline_objects[i].op_type_rename_rr<< "src1:"<<pipeline_objects[i].src1_rename_rr;
+			
+			
+			
+			/////////////////TIMING////////////////////
+			pipeline_objects[i].no_clk_dr = pipeline_objects.no_clk_decode;
+			pipeline_objects[i].entry_clk_fdr = pipeline_objects.entry_clk_fd;
+			pipeline_objects[i].no_clk_rename = 1;
 		}
 	}
 	else
 	{
-		printf("\n RR can not accept a new bundle");
+		//printf("\n RR can not accept a new bundle");
 		
 		for(int i=0;i<WIDTH;i++)
 		{
@@ -316,7 +332,7 @@ int Advance_Cycle(FILE *FP)
 	/////////////////////////Decode-Rename////////////////////////////////
 	if(rename_can_accept_new_bundle)
 	{
-		printf("\n Rename can accept a new bundle");
+		//printf("\n Rename can accept a new bundle");
 		
 		for(int i=0;i<WIDTH;i++)
 		{
@@ -333,13 +349,17 @@ int Advance_Cycle(FILE *FP)
 			
 			pipeline_objects[i].PC_decode_rename = pipeline_objects[i].PC_fetch_decode;
 			
+			//////////////TIMING///////////////
+			pipeline_objects[i].entry_clk_fd = pipeline_objects[i].entry_clk_fetch;
+			pipeline_objects[i].no_clk_decode = 1;
+			
 			
 		}
 		decode_can_accept_new_bundle = 1;
 	}
 	else
 	{
-		printf("\n Rename can not accept a new bundle");
+		//printf("\n Rename can not accept a new bundle");
 		
 		for(int i=0;i<WIDTH;i++)
 			pipeline_objects[i].no_clk_decode += 1;
@@ -354,19 +374,21 @@ int Advance_Cycle(FILE *FP)
 	
 	if(decode_can_accept_new_bundle){                                              //Think about the case when decode has to accept fewer than WIDTH instructions
 
-		printf("\n Instruction fetched in a given cycle\n");
+		//printf("\n Instruction fetched in a given cycle\n");
 		
 	for(int i =0; i<WIDTH;i++)
 	{
 	if(fscanf(FP, "%lx %d %d %d %d", &pc, &op_type, &dest, &src1, &src2) != EOF)
 		{
 		INST_FETCH_CNT += 1;
-		printf("%lx %d %d %d %d\n", pc, op_type, dest, src1, src2);
+		//printf("%lx %d %d %d %d\n", pc, op_type, dest, src1, src2);
 		pipeline_objects[i].src1_fetch_decode = src1;
 		pipeline_objects[i].src2_fetch_decode = src2;
 		pipeline_objects[i].dest_fetch_decode = dest;
 		pipeline_objects[i].op_type_fetch_decode = op_type;
 		pipeline_objects[i].PC_fetch_decode = pc;
+		
+		pipeline_objects[i].entry_clk_fetch = ticker;
 		}
 	else                                                              //When we have fetch less than width functions
 		{
@@ -391,6 +413,11 @@ int Advance_Cycle(FILE *FP)
 		temp_control_signal += 1;
 		return 1;
 	}
+	
+	
+	
+	ticker = ticker + 1;                                               //Updating the global clock
+	
 }
 
 /////////////////////////////////////////////////////////////////////
@@ -398,46 +425,60 @@ int Advance_Cycle(FILE *FP)
 /////////////////////////////////Decode/////////////////////////////
 void Decode()
 {
-	std::cout<<"\n In decode stage";
+	//std::cout<<"\n In decode stage";
 }
 ////////////////////////////////////////////////////////////////////
 
 //////////////////////////////RETIRE//////////////////////////////
 void Retire()
 {
-	std::cout<<"\n In retire stage";
+	//std::cout<<"\n In retire stage";
 	
 	int inst_retired_this_cycle = 0;
-	for(int i = 0 ; i<ROB_size; i++)
+	std::cout<<"\n Printing ROB Contents";
+	for(int i=0;i<ROB_size;i++)
+		std::cout<<"\n Valid:"<<ROB[i][0]<<" robTag:"<<ROB[i][1]<<" dst:R"<<ROB[i][2]<<" rdy:"<<ROB[i][3]<<" exc:"<<ROB[i][4]<<" mis:"<<ROB[i][5]<<" pc:"<<ROB[i][6];
+	
+	for(int i = ROB_head_pointer ; i<ROB_size; i++)
 	{
-		if(ROB[i][10] == 0)
-			continue;
-		
-		
+		//if(ROB[i][10] == 0)                                                       //Not yet assiging valid bits
+		//	continue;
+
 		if(inst_retired_this_cycle > WIDTH)
 			break;
 		if(ROB[ROB_head_pointer][3] == 1)
 		{
-			if(RMT_tag[ROB[ROB_head_pointer][2]] == ROB[ROB_head_pointer][1])      //Checking if we have to update the RMT
+			std::cout<<"\n  *";
+			std::cout<<"\n  **";
+			std::cout<<"\n  ***";
+			std::cout<<"\n  ****";
+			std::cout<<"\n  *****";
+			std::cout<<"\n  ******";
+		
+			if(ROB[ROB_head_pointer][2] == 444)                                    //Checking for branch instructions
+			{}
+			
+			else if(RMT_tag[ROB[ROB_head_pointer][2]] == ROB[ROB_head_pointer][1])      //Checking if we have to update the RMT
 			{
 				RMT_valid_array[ROB[ROB_head_pointer][2]] = 0;                     //Invalidating that particular entry
 			}
 			
 			ROB_can_accpet_new_bundle++;                                           //Reflects the number of free entries in the ROB
+			std::cout<<"\n"<<"RETIRED  "<<"fu{"<<"}"<<"  src{";
 			
 			ROB_head_pointer += 1;
 			ROB_head_pointer = ROB_head_pointer%ROB_size;
 			INST_RETIRE_CNT += 1;
 			inst_retired_this_cycle += 1;
 			
-			for(int j=0;j<writeback_free_entry_pointer;j++)
+			/*for(int j=0;j<writeback_free_entry_pointer;j++)                       //Idk why i wrote this but then also it shout be be before updating the head pointer
 			{
 				if(WriteBack_buffer[j][2] == ROB[ROB_head_pointer][2])
 				{
 					std::cout<<"\n"<<"RETIRED  "<<"fu{"<<"}"<<"  src{";
 				}
 				
-			}
+			}*/
 		}
 	}
 }
@@ -453,9 +494,15 @@ void Writeback() {
 		for(int j=0;j<ROB_size;j++)
 		{
 			if(WriteBack_buffer[i][2] == ROB[j][1])
+			{
 				ROB[j][3] = 1;                                                    //Setting ready bit in ROB
+				
+			}
+				
 		}
 	}
+	
+	writeback_free_entry_pointer = 0;  //Since we don't have a limit on the number of instructions written back in each cycle we get an empty writback buffer each cycle
 
 }
 
@@ -562,6 +609,9 @@ void Execute() {
 		{
 			//0:src1,1:src2,2:dest,3:op_type,4:no_cyles_in_exe,5:completed?,6:src1_og,7:src2_og,8:src3_og,9:valid
 			//10: no_clk_iq,no_clk_in_rr,no_clk_in_rename_rr,no_clk_in_decode_rr,no_clk_in_fetch_rr;
+			/*std::cout<<"\n xecute list pointer:"<<execute_list_free_entry_pointer;
+			std::cout<<"\n writeback_pointer:"<<writeback_free_entry_pointer;
+			std::cout<<"\nadfgad";*/
 			WriteBack_buffer[writeback_free_entry_pointer][0] = execute_list[i][0];
 			WriteBack_buffer[writeback_free_entry_pointer][1] = execute_list[i][1];
 			WriteBack_buffer[writeback_free_entry_pointer][2] = execute_list[i][2];
@@ -632,16 +682,12 @@ void Execute() {
 		}
 	}
 	
-	std::cout<<"\n Segmentation fault check 4";
-	
 	
 	/////////////////////////////////Updating the cycles//////////////////////////////////////
 	for(int i =0;i<execute_list_free_entry_pointer;i++)
 		execute_list[i][4] += 1;
 	
 	/////////////////////////////////////////////////////////////////////////////////////////
-	
-	std::cout<<"\n Segmentation fault check 5";
 	
 	std::cout<<"\n Printing the execute list in execute stage\n";
 	//0:src1,1:src2,2:dest,3:op_type,4:no_cyles_in_exe,5:completed?,
@@ -653,7 +699,7 @@ void Execute() {
 void Issue() {
 	
 	
-	std::cout<<"\n In Issue stage";
+	//std::cout<<"\n In Issue stage";
 	
 	
 	
@@ -684,6 +730,11 @@ void Issue() {
 			oldest = j;
 			if((IQ[j][0] == 1)&&(IQ[j][1] == oldest) && (IQ[j][3]) && (IQ[j][5]))                  //THen issue it to the execute list
 			{
+				//0:src1,1:src2,2:dest,3:op_type,4:no_cyles_in_exe,5:completed?,6:src1_og,7:src2_og,8:src3_og,9:valid
+				//10: no_clk_iq,11:no_clk_dispatch,12:no_clk_rrd,13:no_clk_rerd,14:no_clk_drerd,15:entry_clk_fdrerd,16:rob_tag
+				
+				// 12:no_clk_dispatch,13:no_clk_rrd,14:no_clk_rerd,15:no_clk_drerd,16:entry_clk_fdrerd,17: ROB_tag; //ISSUE_QUEUE
+														 
 				execute_list[execute_list_free_entry_pointer][0] = IQ[j][4];                       //renamed source 1
 				execute_list[execute_list_free_entry_pointer][1] = IQ[j][6];                       //renamed source 2
 				execute_list[execute_list_free_entry_pointer][2] = IQ[j][2];                       //renamed destination 
@@ -692,6 +743,18 @@ void Issue() {
 				execute_list[execute_list_free_entry_pointer][8] = IQ[j][9];                       //dest og
 				execute_list[execute_list_free_entry_pointer][3] = IQ[j][10];                      //op_type
 				execute_list[execute_list_free_entry_pointer][9] = 1;                              //valid instruction 
+				
+				//////////////////////TIMING/////////////////////////////////
+				execute_list[execute_list_free_entry_pointer][10] = IQ[j][11];
+				execute_list[execute_list_free_entry_pointer][11] = IQ[j][12];
+				execute_list[execute_list_free_entry_pointer][12] = IQ[j][13];
+				execute_list[execute_list_free_entry_pointer][13] = IQ[j][14];
+				execute_list[execute_list_free_entry_pointer][14] = IQ[j][15];
+				execute_list[execute_list_free_entry_pointer][15] = IQ[j][16];
+				execute_list[execute_list_free_entry_pointer][16] = IQ[j][17];
+				
+				
+			
 				execute_list_free_entry_pointer += 1;
 				
 				number_of_issued_inst += 1;
@@ -712,6 +775,13 @@ void Issue() {
 					IQ[k][8] = IQ[k+1][8];
 					IQ[k][9] = IQ[k+1][9];
 					IQ[k][10] = IQ[k+1][10];
+					IQ[k][11] = IQ[k+1][11];
+					IQ[k][12] = IQ[k+1][12];
+					IQ[k][13] = IQ[k+1][13];
+					IQ[k][14] = IQ[k+1][14];
+					IQ[k][15] = IQ[k+1][15];
+					IQ[k][16] = IQ[k+1][16];
+					IQ[k][17] = IQ[k+1][17];
 				}
 				IQ[IQ_size-2][0] = IQ[IQ_size-1][0];                         //Moving the issue queue up for the last element
 				IQ[IQ_size-2][1] = IQ[IQ_size-1][1];
@@ -724,29 +794,38 @@ void Issue() {
 				IQ[IQ_size-2][8] = IQ[IQ_size-1][8];
 				IQ[IQ_size-2][9] = IQ[IQ_size-1][9];
 				IQ[IQ_size-2][10] = IQ[IQ_size-1][10];
+				IQ[IQ_size-2][11] = IQ[IQ_size-1][11];
+				IQ[IQ_size-2][12] = IQ[IQ_size-1][12];
+				IQ[IQ_size-2][13] = IQ[IQ_size-1][13];
+				IQ[IQ_size-2][14] = IQ[IQ_size-1][14];
+				IQ[IQ_size-2][15] = IQ[IQ_size-1][15];
+				IQ[IQ_size-2][16] = IQ[IQ_size-1][16];
+				IQ[IQ_size-2][17] = IQ[IQ_size-1][17];
+				
 				
 				break;                                                        //Becase I want to start new iteration
 			}
 		}
 	}
 	
-	std::cout<<"\n Printing the execute list\n";
+	/*std::cout<<"\n Printing the execute list\n";
 	//0:src1,1:src2,2:dest,3:op_type,4:no_cyles_in_exe,5:completed?,
 	for(int i=0;i<execute_list_free_entry_pointer;i++)
 		std::cout<<"\n src1:"<<execute_list[i][0]<<" src2:"<<execute_list[i][1]<<" dest:"<<execute_list[i][2]<<" op_type:"<<execute_list[i][3]<<" no_cycles:"<<execute_list[i][4]<<" completed?:"<<execute_list[i][5];
+	*/
+	
 }
 
 ////////////////////////////////////////////////////////////////////////////////////
 void Dispatch() {
 	
-	std::cout<<"\n In Dispatch stage";
+	//std::cout<<"\n In Dispatch stage";
 	
 	
 	
 	for(int i=0;i<WIDTH;i++){
 		
-		std::cout<<"\n"<<i<<" "<<"src1 R:"<<pipeline_objects[i].src1_rr_dispatch<<" src2 :R"<<pipeline_objects[i].src2_rr_dispatch<<" dest:R"<<pipeline_objects[i].dest_rr_dispatch;
-		//std::cout<<"\n IQ_free_pointer "<<IQ_entry_pointer;
+		//std::cout<<"\n"<<i<<" "<<"src1 R:"<<pipeline_objects[i].src1_rr_dispatch<<" src2 :R"<<pipeline_objects[i].src2_rr_dispatch<<" dest:R"<<pipeline_objects[i].dest_rr_dispatch;
 		
 		if((pipeline_objects[i].src1_rr_dispatch == -2)||(pipeline_objects[i].src2_rr_dispatch == -2)||(pipeline_objects[i].dest_rr_dispatch == -2))
 			continue;
@@ -778,6 +857,20 @@ void Dispatch() {
 			IQ[IQ_entry_pointer][8] = pipeline_objects[i].src2_og_rr_dispatch;
 			IQ[IQ_entry_pointer][9] = pipeline_objects[i].dest_og_rr_dispatch;
 			IQ[IQ_entry_pointer][10] = pipeline_objects[i].op_type_rr_dispatch;
+			IQ[IQ_entry_pointer][17] = pipeline_objects[i].ROB_tag_for_this_inst_rr;
+			
+			
+			
+			////////////////////////TIMING//////////////////////////////
+			//pipeline_objects[i].no_clk_dispatch = 1;                                                 //Instead initialise it to one
+			IQ[IQ_entry_pointer][12] = pipeline_objects[i].no_clk_dispatch;
+			IQ[IQ_entry_pointer][13] = pipeline_objects[i].no_clk_rr;
+			IQ[IQ_entry_pointer][14] = pipeline_objects[i].no_clk_rer;
+			IQ[IQ_entry_pointer][15] = pipeline_objects[i].no_clk_drer;
+			IQ[IQ_entry_pointer][16] = pipeline_objects[i].no_clk_fdrer;
+			
+			
+			
 			
 			IQ_entry_pointer += 1;
 		}
@@ -786,26 +879,26 @@ void Dispatch() {
 			dispatch_can_accept_new_bundle = 0;
 			
 			
-			for(int i=0;i<WIDTH;i++)
+			//for(int j=0;j<WIDTH;j++)
 				pipeline_objects[i].no_clk_dispatch += 1;
 		}
 	}
 	
 	
 	////Printing ISSUE QUEUE//////
-	std::cout<<"\n Printing issue queue";
+	/*std::cout<<"\n Printing issue queue";
 	//[][0] valid;[][1] age, [][2]dst tag, rs1 rdy, rs1 tag/value,rs2 rdy, rs2 tag/value , src1_og, src2_og, dest_og, op_type, no_cycles_in_iq
 	for(int i=0;i<IQ_size;i++)
 		if(IQ[i][0] == 1){
 			std::cout<<"\n valid:"<<IQ[i][0]<<" age:"<<IQ[i][1]<<" dst tag:"<<IQ[i][2]<<" rs1 rdy:"<<IQ[i][3]<<" rs1 tag:"<<IQ[i][4]<<" rs2 rdy:"<<IQ[i][5]<<" rs2 tag:"<<IQ[i][6];
 			std::cout<<" src_og:R"<<IQ[i][7]<<" src2_og:R"<<IQ[i][8]<<" dest_og:R"<<IQ[i][9]<<" op_type:"<<IQ[i][10]<<" no_cycles:"<<IQ[i][11];
-		}
+		}*/
 }
 
 void RegRead() {
 	
 	
-	std::cout<<"\n In RegRead stage";
+	//std::cout<<"\n In RegRead stage";
 	
 	
 	
@@ -813,6 +906,12 @@ void RegRead() {
 		rr_can_accept_new_bundle = 1;
 	for(int i=0;i<WIDTH;i++)
 	{
+		////////////////Moving the rob tag along///////////////////
+		pipeline_objects[i].ROB_tag_for_this_inst_rr = pipeline_objects[i].ROB_tag_for_this_inst;
+		
+		//////////////////////////////////////////////////////////
+		
+		
 		///////////////////////////Source 1/////////////////////////
 		if(pipeline_objects[i].src1_og_rename_rr == -1)
 			pipeline_objects[i].src1_ready = 1;
@@ -865,7 +964,19 @@ void RegRead() {
 		}
 		else                                                                      //Means the values are ready in the ARF
 			pipeline_objects[i].src2_ready = 1; 
+			
+			
+		
+			
+			
+		///////////////////TIMING////////////////////
+		pipeline_objects[i].no_clk_dispatch = 1;
+		pipeline_objects[i].no_clk_rrd = pipeline_objects[i].no_clk_rr;
+		pipeline_objects[i].no_clk_rerd = pipeline_objects[i].no_clk_rer;
+		pipeline_objects[i].no_clk_drerd = pipeline_objects[i].no_clk_drer;
+		pipeline_objects[i].no_clk_fdrerd = pipeline_objects[i].no_clk_fdrer;
 	}
+	
 	}
 	else
 	{
