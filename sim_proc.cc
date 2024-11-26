@@ -141,7 +141,7 @@ void Fetch()
 
 void Rename()
 {
-	//std::cout<<"\n In rename stage";
+	std::cout<<"\n In rename stage";
 	
 	
 	if((ROB_head_pointer == ROB_tail_pointer)&&(ROB_tail_phase == 0))        //ROB is empty
@@ -236,7 +236,7 @@ void Rename()
 		rename_can_accept_new_bundle = 0;
 	
 	
-	/*std::cout<<"\n Printing RMT Contents";
+	std::cout<<"\n Printing RMT Contents";
 	for(int i=0;i<67;i++)
 	{
 		if(RMT_valid_array[i] == 1)                                                         //Only printing entries with valid rob tag
@@ -245,7 +245,7 @@ void Rename()
 	
 	std::cout<<"\n Printing ROB Contents";
 	for(int i=0;i<ROB_size;i++)
-		std::cout<<"\n Valid:"<<ROB[i][0]<<" robTag:"<<ROB[i][1]<<" dst:R"<<ROB[i][2]<<" rdy:"<<ROB[i][3]<<" exc:"<<ROB[i][4]<<" mis:"<<ROB[i][5]<<" pc:"<<ROB[i][6];*/
+		std::cout<<"\n Valid:"<<ROB[i][0]<<" robTag:"<<ROB[i][1]<<" dst:R"<<ROB[i][2]<<" rdy:"<<ROB[i][3]<<" exc:"<<ROB[i][4]<<" mis:"<<ROB[i][5]<<" pc:"<<ROB[i][6];
 	
 }
 
@@ -272,12 +272,12 @@ int Advance_Cycle(FILE *FP)
 			
 			pipeline_objects[i].PC_rr_dispatch = pipeline_objects[i].PC_rename_rr;
 			
-			//std::cout<<"\n DISPATCH lineNo:"<<i<<" op_type:"<<pipeline_objects[i].op_type_rr_dispatch<< " src1:"<< pipeline_objects[i].src1_rr_dispatch;
+			std::cout<<"\n DISPATCH lineNo:"<<i<<" op_type:"<<pipeline_objects[i].op_type_rr_dispatch<< " src1:"<< pipeline_objects[i].src1_rr_dispatch;
 			
 			////////////////////TIMING//////////////////////////////
 			pipeline_objects[i].no_clk_rer = pipeline_objects[i].no_clk_rename;
 			pipeline_objects[i].no_clk_drer = pipeline_objects[i].no_clk_dr;
-			pipeline_objects[i].no_clk_fdrer = pipeline_objects[i].no_clk_fdr;
+			pipeline_objects[i].entry_clk_fdrer = pipeline_objects[i].entry_clk_fdr;
 			
 		}
 	}
@@ -285,6 +285,7 @@ int Advance_Cycle(FILE *FP)
 		//printf("\n Dispatch can not accept a new bundle");
 	
 	/////////////////////////Rename-RegRead///////////////////////////////
+	std::cout<<"\nrr_can_accept_new_bundle: "<<rr_can_accept_new_bundle;
 	if(rr_can_accept_new_bundle)
 	{
 		//printf("\n RR can accept a new bundle");
@@ -305,13 +306,13 @@ int Advance_Cycle(FILE *FP)
 			
 			pipeline_objects[i].PC_rename_rr = pipeline_objects[i].PC_decode_rename;
 			
-			//std::cout<<"\n REGREAD lineNo:"<<i<<" op_type:"<<pipeline_objects[i].op_type_rename_rr<< "src1:"<<pipeline_objects[i].src1_rename_rr;
+			std::cout<<"\n REGREAD lineNo:"<<i<<" op_type:"<<pipeline_objects[i].op_type_rename_rr<< "src1:"<<pipeline_objects[i].src1_rename_rr;
 			
 			
 			
 			/////////////////TIMING////////////////////
-			pipeline_objects[i].no_clk_dr = pipeline_objects.no_clk_decode;
-			pipeline_objects[i].entry_clk_fdr = pipeline_objects.entry_clk_fd;
+			pipeline_objects[i].no_clk_dr = pipeline_objects[i].no_clk_decode;
+			pipeline_objects[i].entry_clk_fdr = pipeline_objects[i].entry_clk_fd;
 			pipeline_objects[i].no_clk_rename = 1;
 		}
 	}
@@ -381,7 +382,7 @@ int Advance_Cycle(FILE *FP)
 	if(fscanf(FP, "%lx %d %d %d %d", &pc, &op_type, &dest, &src1, &src2) != EOF)
 		{
 		INST_FETCH_CNT += 1;
-		//printf("%lx %d %d %d %d\n", pc, op_type, dest, src1, src2);
+		printf("%lx %d %d %d %d\n", pc, op_type, dest, src1, src2);
 		pipeline_objects[i].src1_fetch_decode = src1;
 		pipeline_objects[i].src2_fetch_decode = src2;
 		pipeline_objects[i].dest_fetch_decode = dest;
@@ -425,19 +426,21 @@ int Advance_Cycle(FILE *FP)
 /////////////////////////////////Decode/////////////////////////////
 void Decode()
 {
-	//std::cout<<"\n In decode stage";
+	std::cout<<"\n In decode stage";
 }
 ////////////////////////////////////////////////////////////////////
 
 //////////////////////////////RETIRE//////////////////////////////
 void Retire()
 {
-	//std::cout<<"\n In retire stage";
+	std::cout<<"\n\n\n In retire stage";
 	
 	int inst_retired_this_cycle = 0;
 	std::cout<<"\n Printing ROB Contents";
 	for(int i=0;i<ROB_size;i++)
 		std::cout<<"\n Valid:"<<ROB[i][0]<<" robTag:"<<ROB[i][1]<<" dst:R"<<ROB[i][2]<<" rdy:"<<ROB[i][3]<<" exc:"<<ROB[i][4]<<" mis:"<<ROB[i][5]<<" pc:"<<ROB[i][6];
+	
+	std::cout<<"\n ROB_head_pointer:"<<ROB_head_pointer;
 	
 	for(int i = ROB_head_pointer ; i<ROB_size; i++)
 	{
@@ -446,14 +449,11 @@ void Retire()
 
 		if(inst_retired_this_cycle > WIDTH)
 			break;
+		
+		std::cout<<"\n ROB[ROB_head_pointer][3]:"<<ROB[ROB_head_pointer][3];
 		if(ROB[ROB_head_pointer][3] == 1)
 		{
-			std::cout<<"\n  *";
-			std::cout<<"\n  **";
-			std::cout<<"\n  ***";
-			std::cout<<"\n  ****";
-			std::cout<<"\n  *****";
-			std::cout<<"\n  ******";
+
 		
 			if(ROB[ROB_head_pointer][2] == 444)                                    //Checking for branch instructions
 			{}
@@ -489,11 +489,13 @@ void Writeback() {
 	std::cout<<"\n In Writeback stage";
 	
 	////I don't think we need to hold the values in write back buffer, after setting the ready bit in ROB we can let it over write ig
-	for(int i =0 ;i<writeback_free_entry_pointer;i++)
+	for(int i =0 ;i<=writeback_free_entry_pointer;i++)
 	{
 		for(int j=0;j<ROB_size;j++)
 		{
-			if(WriteBack_buffer[i][2] == ROB[j][1])
+			
+			//std::cout<<"\n WritebackBuffer: "<<WriteBack_buffer[i][16]<<"  ROB:"<<ROB[j][1]<<"\n";
+			if(WriteBack_buffer[i][16] == ROB[j][1])
 			{
 				ROB[j][3] = 1;                                                    //Setting ready bit in ROB
 				
@@ -608,7 +610,7 @@ void Execute() {
 		if(execute_list[i][5] == 1)                                      //Filtering complete instructions
 		{
 			//0:src1,1:src2,2:dest,3:op_type,4:no_cyles_in_exe,5:completed?,6:src1_og,7:src2_og,8:src3_og,9:valid
-			//10: no_clk_iq,no_clk_in_rr,no_clk_in_rename_rr,no_clk_in_decode_rr,no_clk_in_fetch_rr;
+				//10: no_clk_iq,11:no_clk_dispatch,12:no_clk_rrd,13:no_clk_rerd,14:no_clk_drerd,15:entry_clk_fdrerd,16:rob_tag
 			/*std::cout<<"\n xecute list pointer:"<<execute_list_free_entry_pointer;
 			std::cout<<"\n writeback_pointer:"<<writeback_free_entry_pointer;
 			std::cout<<"\nadfgad";*/
@@ -627,6 +629,8 @@ void Execute() {
 			WriteBack_buffer[writeback_free_entry_pointer][12] = execute_list[i][12];
 			WriteBack_buffer[writeback_free_entry_pointer][13] = execute_list[i][13];
 			WriteBack_buffer[writeback_free_entry_pointer][14] = execute_list[i][14];
+			WriteBack_buffer[writeback_free_entry_pointer][15] = execute_list[i][15];
+			WriteBack_buffer[writeback_free_entry_pointer][16] = execute_list[i][16];
 			
 			writeback_free_entry_pointer += 1;
 		}
@@ -658,6 +662,8 @@ void Execute() {
 				execute_list[j][12] = execute_list[j+1][12];
 				execute_list[j][13] = execute_list[j+1][13];
 				execute_list[j][14] = execute_list[j+1][14];
+				execute_list[j][15] = execute_list[j+1][15];
+				execute_list[j][16] = execute_list[j+1][16];
 			}
 			
 			execute_list[execute_list_free_entry_pointer - 2][0] = execute_list[execute_list_free_entry_pointer - 1][0];
@@ -675,6 +681,8 @@ void Execute() {
 			execute_list[execute_list_free_entry_pointer - 2][12] = execute_list[execute_list_free_entry_pointer - 1][12];
 			execute_list[execute_list_free_entry_pointer - 2][13] = execute_list[execute_list_free_entry_pointer - 1][13];
 			execute_list[execute_list_free_entry_pointer - 2][14] = execute_list[execute_list_free_entry_pointer - 1][14];
+			execute_list[execute_list_free_entry_pointer - 2][15] = execute_list[execute_list_free_entry_pointer - 1][15];
+			execute_list[execute_list_free_entry_pointer - 2][16] = execute_list[execute_list_free_entry_pointer - 1][16];
 			
 			execute_list_free_entry_pointer -= 1;
 			
@@ -699,7 +707,7 @@ void Execute() {
 void Issue() {
 	
 	
-	//std::cout<<"\n In Issue stage";
+	std::cout<<"\n In Issue stage";
 	
 	
 	
@@ -808,24 +816,24 @@ void Issue() {
 		}
 	}
 	
-	/*std::cout<<"\n Printing the execute list\n";
+	std::cout<<"\n Printing the execute list\n";
 	//0:src1,1:src2,2:dest,3:op_type,4:no_cyles_in_exe,5:completed?,
 	for(int i=0;i<execute_list_free_entry_pointer;i++)
 		std::cout<<"\n src1:"<<execute_list[i][0]<<" src2:"<<execute_list[i][1]<<" dest:"<<execute_list[i][2]<<" op_type:"<<execute_list[i][3]<<" no_cycles:"<<execute_list[i][4]<<" completed?:"<<execute_list[i][5];
-	*/
+	
 	
 }
 
 ////////////////////////////////////////////////////////////////////////////////////
 void Dispatch() {
 	
-	//std::cout<<"\n In Dispatch stage";
+	std::cout<<"\n In Dispatch stage";
 	
 	
 	
 	for(int i=0;i<WIDTH;i++){
 		
-		//std::cout<<"\n"<<i<<" "<<"src1 R:"<<pipeline_objects[i].src1_rr_dispatch<<" src2 :R"<<pipeline_objects[i].src2_rr_dispatch<<" dest:R"<<pipeline_objects[i].dest_rr_dispatch;
+		std::cout<<"\n"<<i<<" "<<"src1 R:"<<pipeline_objects[i].src1_rr_dispatch<<" src2 :R"<<pipeline_objects[i].src2_rr_dispatch<<" dest:R"<<pipeline_objects[i].dest_rr_dispatch;
 		
 		if((pipeline_objects[i].src1_rr_dispatch == -2)||(pipeline_objects[i].src2_rr_dispatch == -2)||(pipeline_objects[i].dest_rr_dispatch == -2))
 			continue;
@@ -867,7 +875,7 @@ void Dispatch() {
 			IQ[IQ_entry_pointer][13] = pipeline_objects[i].no_clk_rr;
 			IQ[IQ_entry_pointer][14] = pipeline_objects[i].no_clk_rer;
 			IQ[IQ_entry_pointer][15] = pipeline_objects[i].no_clk_drer;
-			IQ[IQ_entry_pointer][16] = pipeline_objects[i].no_clk_fdrer;
+			IQ[IQ_entry_pointer][16] = pipeline_objects[i].entry_clk_fdrer;
 			
 			
 			
@@ -886,19 +894,19 @@ void Dispatch() {
 	
 	
 	////Printing ISSUE QUEUE//////
-	/*std::cout<<"\n Printing issue queue";
+	std::cout<<"\n Printing issue queue";
 	//[][0] valid;[][1] age, [][2]dst tag, rs1 rdy, rs1 tag/value,rs2 rdy, rs2 tag/value , src1_og, src2_og, dest_og, op_type, no_cycles_in_iq
 	for(int i=0;i<IQ_size;i++)
 		if(IQ[i][0] == 1){
 			std::cout<<"\n valid:"<<IQ[i][0]<<" age:"<<IQ[i][1]<<" dst tag:"<<IQ[i][2]<<" rs1 rdy:"<<IQ[i][3]<<" rs1 tag:"<<IQ[i][4]<<" rs2 rdy:"<<IQ[i][5]<<" rs2 tag:"<<IQ[i][6];
 			std::cout<<" src_og:R"<<IQ[i][7]<<" src2_og:R"<<IQ[i][8]<<" dest_og:R"<<IQ[i][9]<<" op_type:"<<IQ[i][10]<<" no_cycles:"<<IQ[i][11];
-		}*/
+		}
 }
 
 void RegRead() {
 	
 	
-	//std::cout<<"\n In RegRead stage";
+	std::cout<<"\n In RegRead stage";
 	
 	
 	
@@ -974,7 +982,7 @@ void RegRead() {
 		pipeline_objects[i].no_clk_rrd = pipeline_objects[i].no_clk_rr;
 		pipeline_objects[i].no_clk_rerd = pipeline_objects[i].no_clk_rer;
 		pipeline_objects[i].no_clk_drerd = pipeline_objects[i].no_clk_drer;
-		pipeline_objects[i].no_clk_fdrerd = pipeline_objects[i].no_clk_fdrer;
+		pipeline_objects[i].entry_clk_fdrerd = pipeline_objects[i].entry_clk_fdrer;
 	}
 	
 	}

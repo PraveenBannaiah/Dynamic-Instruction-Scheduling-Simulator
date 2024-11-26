@@ -72,8 +72,8 @@ typedef struct Pipeline{
 	int src1_exe4,src2_exe4,dest_exe4,op_type_exe4,no_cyles_in_ex_exe4,completed_exe4;
 	int src1_exe5,src2_exe5,dest_exe5,op_type_exe5,no_cyles_in_ex_exe5,completed_exe5;*/
 	
-	unsigned int no_clk_exe, no_clk_ie, no_clk_di, no_clk_rrdi, no_clk_rerdi,no_clk_drerdi,entry_clk_fdrerdi;
-	int ROB_tag_for_this_inst_rr_d_i_ex;
+	//unsigned int no_clk_exe, no_clk_ie, no_clk_di, no_clk_rrdi, no_clk_rerdi,no_clk_drerdi,entry_clk_fdrerdi;
+	//int ROB_tag_for_this_inst_rr_d_i_ex;
 	
 	//Redister between the Execute stage and the writeback will also be dynamic as the size will again depend on WIDTH
 	/*int src1_wb1,src2_wb1,dest_wb1,op_type_wb1,no_cyles_in_ex_wb1,completed_wb1;   //We have five because a total of five instructions can be in flight in a given execute stage
@@ -82,7 +82,7 @@ typedef struct Pipeline{
 	int src1_wb4,src2_wb4,dest_wb4,op_type_wb4,no_cyles_in_ex_wb4,completed_wb4;
 	int src1_wb5,src2_wb5,dest_wb5,op_type_wb5,no_cyles_in_ex_wb5,completed_wb5;*/
 	
-	unsigned int no_clk_wb, no_clk_ew, no_clk_exe, no_clk_ie, no_clk_di, no_clk_rrdi, no_clk_rerdi,no_clk_drerdi,entry_clk_fdrerdi;
+	//unsigned int no_clk_wb, no_clk_ew, no_clk_exe, no_clk_ie, no_clk_di, no_clk_rrdi, no_clk_rerdi,no_clk_drerdi,entry_clk_fdrerdi;
 	
 }pipeline;
 
