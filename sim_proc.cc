@@ -99,7 +99,7 @@ int main (int argc, char* argv[])
 	
 	WriteBack_buffer = new int*[WIDTH*5];                                       //Because WIDTH*5 is the maximum number of instructions that can finish in a given cycle
 	for(int j=0;j<(WIDTH*5);j++)
-		WriteBack_buffer[j] = new int[15];                                      //All instructions spend one cycle in Writeback buffer thats why there is no field for it
+		WriteBack_buffer[j] = new int[20];                                      //All instructions spend one cycle in Writeback buffer thats why there is no field for it
 	writeback_free_entry_pointer = 0;
 	
 	/////////////////////////////////////////////////////////////////////////
@@ -152,7 +152,7 @@ void Rename()
 	//	ROB_can_accpet_new_bundle = 0;
 		
 		
-	if(rr_can_accept_new_bundle && ROB_can_accpet_new_bundle)
+	if(rr_can_accept_new_bundle && (ROB_can_accpet_new_bundle>=WIDTH))
 	{
 		rename_can_accept_new_bundle = 1;
 		
@@ -228,6 +228,9 @@ void Rename()
 		}
 		
 	}
+	
+	else
+		rename_can_accept_new_bundle = 0;
 	
 	
 	std::cout<<"\n Printing RMT Contents";
@@ -431,7 +434,7 @@ void Retire()
 			{
 				if(WriteBack_buffer[j][2] == ROB[ROB_head_pointer][2])
 				{
-					std::cout<<"\n"<<"test  "<<"fu{"<<"}"<<"  src{";
+					std::cout<<"\n"<<"RETIRED  "<<"fu{"<<"}"<<"  src{";
 				}
 				
 			}
@@ -444,8 +447,6 @@ void Writeback() {
 	
 	std::cout<<"\n In Writeback stage";
 	
-	
-	
 	////I don't think we need to hold the values in write back buffer, after setting the ready bit in ROB we can let it over write ig
 	for(int i =0 ;i<writeback_free_entry_pointer;i++)
 	{
@@ -455,6 +456,7 @@ void Writeback() {
 				ROB[j][3] = 1;                                                    //Setting ready bit in ROB
 		}
 	}
+
 }
 
 void Execute() {
@@ -469,18 +471,24 @@ void Execute() {
 		{
 			if(execute_list[i][4] == 1)
 				execute_list[i][5] = 1;                           //set the complete flag high
+			else
+				execute_list[i][5] = 0;
 			
 		}
 		else if(execute_list[i][3] == 1)                           //2 cycle instruction 
 		{
 			if(execute_list[i][4] == 2)
-				execute_list[i][5] = 1; 
+				execute_list[i][5] = 1;
+			else
+				execute_list[i][5] = 0;			
 			
 		}
 		else if(execute_list[i][3] == 2)                           //5 cycle instruction
 		{
 			if(execute_list[i][4] == 5)
 				execute_list[i][5] = 1; 
+			else
+				execute_list[i][5] = 0;
 			
 		}
 	}
@@ -519,6 +527,7 @@ void Execute() {
 				}
 			}
 			
+			
 			/////Forward bypassing for ROB/////////////
 			
 			for(int j=0;j<ROB_size;j++)
@@ -531,7 +540,7 @@ void Execute() {
 			
 			
 			/////Forward bypassing to regread////////
-			for(int j=0;i<WIDTH;j++)
+			for(int j=0;j<WIDTH;j++)
 			{
 				if((execute_list[i][0] == pipeline_objects[j].src1_rr_dispatch) || (execute_list[i][0] == pipeline_objects[j].src1_rr_dispatch))
 					pipeline_objects[j].src1_ready = 1;
@@ -544,6 +553,7 @@ void Execute() {
 		}
 	}
 	/////////////////////////////////////////////////////////////////
+	
 	
 	///////////////////////for writeback/////////////////////////////
 	for(int i =0;i<execute_list_free_entry_pointer;i++)                  //All completed instructions are put into the write back buffer
@@ -618,14 +628,26 @@ void Execute() {
 			
 			execute_list_free_entry_pointer -= 1;
 			
-			i = 0;                                                                       //Resetting i to make sure the flow starts again
+			i = -1;                     //-1 because i is updated i++ at the end of the cycle            //Resetting i to make sure the flow starts again
 		}
 	}
 	
-	std::cout<<"\n Printing the execute list\n";
+	std::cout<<"\n Segmentation fault check 4";
+	
+	
+	/////////////////////////////////Updating the cycles//////////////////////////////////////
+	for(int i =0;i<execute_list_free_entry_pointer;i++)
+		execute_list[i][4] += 1;
+	
+	/////////////////////////////////////////////////////////////////////////////////////////
+	
+	std::cout<<"\n Segmentation fault check 5";
+	
+	std::cout<<"\n Printing the execute list in execute stage\n";
 	//0:src1,1:src2,2:dest,3:op_type,4:no_cyles_in_exe,5:completed?,
 	for(int i=0;i<execute_list_free_entry_pointer;i++)
 		std::cout<<"\n src1:"<<execute_list[i][0]<<" src2:"<<execute_list[i][1]<<" dest:"<<execute_list[i][2]<<" op_type:"<<execute_list[i][3]<<" no_cycles:"<<execute_list[i][4]<<" completed?:"<<execute_list[i][5];
+	
 }
 //////////////////////////////////////////////////////////////////////////////////////////////
 void Issue() {
@@ -646,16 +668,21 @@ void Issue() {
 	}
 	///////////////////////////////////////////
 	
+	execute_list_has_space = 1;                                                                //Initally assume we have space
+	
 	for(int k=0;k<IQ_size;k++){                                                                //Trying to isse upto WIDTH instruction
 		if(number_of_issued_inst > WIDTH)
 			break;
 		if(execute_list_free_entry_pointer > (WIDTH*5))
+		{
+			execute_list_has_space = 0;
 			break;
+		}
 		
 		for(int j=0;j<IQ_size;j++)
 		{
 			oldest = j;
-			if((IQ[j][0] == 1)&&(IQ[j][0] == oldest) && (IQ[j][3]) && (IQ[j][5]))                  //THen issue it to the execute list
+			if((IQ[j][0] == 1)&&(IQ[j][1] == oldest) && (IQ[j][3]) && (IQ[j][5]))                  //THen issue it to the execute list
 			{
 				execute_list[execute_list_free_entry_pointer][0] = IQ[j][4];                       //renamed source 1
 				execute_list[execute_list_free_entry_pointer][1] = IQ[j][6];                       //renamed source 2
@@ -668,7 +695,7 @@ void Issue() {
 				execute_list_free_entry_pointer += 1;
 				
 				number_of_issued_inst += 1;
-				IQ_entry_pointer = IQ_entry_pointer - -1;                                         //Reducing the pointer and age for new isnt
+				IQ_entry_pointer = IQ_entry_pointer -1;                                         //Reducing the pointer and age for new isnt
 				youngest -= 1;
 				for(int k=(j+1);k<(IQ_size);k++)                                                             //reducin the age of the instructions older than issued inst
 					IQ[k][1] = IQ[k][1] - 1;
@@ -702,6 +729,11 @@ void Issue() {
 			}
 		}
 	}
+	
+	std::cout<<"\n Printing the execute list\n";
+	//0:src1,1:src2,2:dest,3:op_type,4:no_cyles_in_exe,5:completed?,
+	for(int i=0;i<execute_list_free_entry_pointer;i++)
+		std::cout<<"\n src1:"<<execute_list[i][0]<<" src2:"<<execute_list[i][1]<<" dest:"<<execute_list[i][2]<<" op_type:"<<execute_list[i][3]<<" no_cycles:"<<execute_list[i][4]<<" completed?:"<<execute_list[i][5];
 }
 
 ////////////////////////////////////////////////////////////////////////////////////
@@ -714,6 +746,7 @@ void Dispatch() {
 	for(int i=0;i<WIDTH;i++){
 		
 		std::cout<<"\n"<<i<<" "<<"src1 R:"<<pipeline_objects[i].src1_rr_dispatch<<" src2 :R"<<pipeline_objects[i].src2_rr_dispatch<<" dest:R"<<pipeline_objects[i].dest_rr_dispatch;
+		//std::cout<<"\n IQ_free_pointer "<<IQ_entry_pointer;
 		
 		if((pipeline_objects[i].src1_rr_dispatch == -2)||(pipeline_objects[i].src2_rr_dispatch == -2)||(pipeline_objects[i].dest_rr_dispatch == -2))
 			continue;
@@ -722,6 +755,7 @@ void Dispatch() {
 		{
 			dispatch_can_accept_new_bundle = 1;
 			
+			//std::cout<<"\n Writing into issue queue";
 			
 			IQ[IQ_entry_pointer][0] = 1;                                           //Setting valid bit as 1
 			IQ[IQ_entry_pointer][1] = youngest;                                    //setting the age bit
@@ -776,12 +810,13 @@ void RegRead() {
 	
 	
 	if(dispatch_can_accept_new_bundle){
+		rr_can_accept_new_bundle = 1;
 	for(int i=0;i<WIDTH;i++)
 	{
 		///////////////////////////Source 1/////////////////////////
 		if(pipeline_objects[i].src1_og_rename_rr == -1)
 			pipeline_objects[i].src1_ready = 1;
-		else if(pipeline_objects[i].src1_og_rename_rr >= 1000)
+		else if(pipeline_objects[i].src1_rename_rr >= 1000)
 		{
 			for(int j=ROB_tail_pointer;j>=0;j--)                                  //We have to go in reverse to find the most recent version
 			{
@@ -833,8 +868,11 @@ void RegRead() {
 	}
 	}
 	else
+	{
+		rr_can_accept_new_bundle = 0;
 		for(int i=0;i<WIDTH;i++)
 			pipeline_objects[i].no_clk_rr += 1;
+	}
 }
 
 
