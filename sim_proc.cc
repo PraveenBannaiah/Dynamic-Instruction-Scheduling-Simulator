@@ -14,7 +14,7 @@ int temp_control_signal = 0;
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-
+unsigned seq_no = 1;                              //Because I am too lazy to actually count it and the inst in ROB retired based on program order
 
 int main (int argc, char* argv[])
 {	
@@ -73,7 +73,7 @@ int main (int argc, char* argv[])
 	ROB = new unsigned long int*[params.rob_size];
 	for(int i=0;i<params.rob_size;i++)
 	{	                          
-	ROB[i] = new unsigned long int[12];       //[][0] valid_dest; [][1] value(used as rob tag); [][2] dst; [][3] rdy; [][4] exc; [][5] mis; [][6] pc, [][7]src_og_1, [][8]src2_og,[][9]op_type,[][10]:valid inst;
+	ROB[i] = new unsigned long int[20];       //[][0] valid_dest; [][1] value(used as rob tag); [][2] dst; [][3] rdy; [][4] exc; [][5] mis; [][6] pc, [][7]src_og_1, [][8]src2_og,[][9]op_type,[][10]:valid inst;
                                               //Use 10001, 10002 etc as rob tag and when accesing just do index%1000
 	}
 	ROB_size = params.rob_size;
@@ -407,13 +407,18 @@ int Advance_Cycle(FILE *FP)
 	}
 	//////////////////////////////////////////////////////////////
 	
-	if(temp_control_signal == 25)
+	/*if(temp_control_signal == 25)
 		return 0;
 	else
 	{
 		temp_control_signal += 1;
 		return 1;
-	}
+	}*/
+	
+	if(INST_FETCH_CNT == INST_RETIRE_CNT)
+		return 0;
+	else
+		return 1;
 	
 	
 	
@@ -464,7 +469,10 @@ void Retire()
 			}
 			
 			ROB_can_accpet_new_bundle++;                                           //Reflects the number of free entries in the ROB
-			std::cout<<"\n"<<"RETIRED  "<<"fu{"<<"}"<<"  src{";
+			
+			//[][0] valid_dest; [][1] value(used as rob tag); [][2] dst; [][3] rdy; [][4] exc; [][5] mis; [][6] pc, [][7]src_og_1, [][8]src2_og,[][9]op_type,[][10]:valid inst;
+			// 11:no_clk_iq,12:no_clk_dispatch,13:no_clk_rrd,14:no_clk_rerd,15:no_clk_drerd,16:entry_clk_fdrerd 17:rob_tag;
+			std::cout<<"\n"<<seq_no<<"  fu{"<<ROB[ROB_head_pointer][9]<<"}"<<"  src{";
 			
 			ROB_head_pointer += 1;
 			ROB_head_pointer = ROB_head_pointer%ROB_size;
@@ -498,6 +506,15 @@ void Writeback() {
 			if(WriteBack_buffer[i][16] == ROB[j][1])
 			{
 				ROB[j][3] = 1;                                                    //Setting ready bit in ROB
+				
+				//Writing the data into the ROB to print it out
+				// 11:no_cycles_iq,12:no_clk_dispatch,13:no_clk_rrd,14:no_clk_rerd,15:no_clk_drerd,16:entry_clk_fdrerd 17:rob_tag;
+				ROB[j][11] = WriteBack_buffer[i][11];
+				ROB[j][12] = WriteBack_buffer[i][12];
+				ROB[j][13] = WriteBack_buffer[i][13];
+				ROB[j][14] = WriteBack_buffer[i][14];
+				ROB[j][15] = WriteBack_buffer[i][15];
+				ROB[j][16] = WriteBack_buffer[i][16];
 				
 			}
 				
@@ -636,12 +653,14 @@ void Execute() {
 		}
 	}
 
-	
+
 	
 	///////////////////////////////////////////////////////////////////////
 	
+
 	////////////////////////////Clearing the execute list//////////////////////
-	for(int i =0;i<execute_list_free_entry_pointer;i++) 
+	int i = 0;
+	while(i<execute_list_free_entry_pointer)
 	{
 		if(execute_list[i][5] == 1)
 		{
@@ -666,7 +685,7 @@ void Execute() {
 				execute_list[j][16] = execute_list[j+1][16];
 			}
 			
-			execute_list[execute_list_free_entry_pointer - 2][0] = execute_list[execute_list_free_entry_pointer - 1][0];
+			/*execute_list[execute_list_free_entry_pointer - 2][0] = execute_list[execute_list_free_entry_pointer - 1][0];
 			execute_list[execute_list_free_entry_pointer - 2][1] = execute_list[execute_list_free_entry_pointer - 1][1];
 			execute_list[execute_list_free_entry_pointer - 2][2] = execute_list[execute_list_free_entry_pointer - 1][2];
 			execute_list[execute_list_free_entry_pointer - 2][3] = execute_list[execute_list_free_entry_pointer - 1][3];
@@ -682,12 +701,14 @@ void Execute() {
 			execute_list[execute_list_free_entry_pointer - 2][13] = execute_list[execute_list_free_entry_pointer - 1][13];
 			execute_list[execute_list_free_entry_pointer - 2][14] = execute_list[execute_list_free_entry_pointer - 1][14];
 			execute_list[execute_list_free_entry_pointer - 2][15] = execute_list[execute_list_free_entry_pointer - 1][15];
-			execute_list[execute_list_free_entry_pointer - 2][16] = execute_list[execute_list_free_entry_pointer - 1][16];
+			execute_list[execute_list_free_entry_pointer - 2][16] = execute_list[execute_list_free_entry_pointer - 1][16];*/
 			
 			execute_list_free_entry_pointer -= 1;
 			
-			i = -1;                     //-1 because i is updated i++ at the end of the cycle            //Resetting i to make sure the flow starts again
+			                    
 		}
+		else
+			i++;
 	}
 	
 	
