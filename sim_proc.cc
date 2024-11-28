@@ -239,7 +239,7 @@ void Rename()
 		rename_can_accept_new_bundle = 0;
 	
 	
-	/*std::cout<<"\n Printing RMT Contents";
+	std::cout<<"\n Printing RMT Contents";
 	for(int i=0;i<67;i++)
 	{
 		if(RMT_valid_array[i] == 1)                                                         //Only printing entries with valid rob tag
@@ -249,7 +249,7 @@ void Rename()
 	std::cout<<"\n Printing ROB Contents";
 	for(int i=0;i<ROB_size;i++)
 		std::cout<<"\n Valid:"<<ROB[i][0]<<" robTag:"<<ROB[i][1]<<" dst:R"<<ROB[i][2]<<" rdy:"<<ROB[i][3]<<" exc:"<<ROB[i][4]<<" mis:"<<ROB[i][5]<<" pc:"<<ROB[i][6];
-	*/
+	
 }
 
 ///////////////////////////Advance_Cycle/////////////////////////
@@ -489,7 +489,7 @@ void Retire()
 		//if(ROB[i][10] == 0)                                                       //Not yet assiging valid bits
 		//	continue;
 
-		if(inst_retired_this_cycle > WIDTH)
+		if(inst_retired_this_cycle == WIDTH)
 			break;
 		
 		//std::cout<<"\n ROB[ROB_head_pointer][3]:"<<ROB[ROB_head_pointer][3];
@@ -629,7 +629,7 @@ void Execute() {
 				
 				//Issue
 				//[][0] valid;[][1] age, [][2]dst tag, rs1 rdy, rs1 tag/value,rs2 rdy, rs2 tag/value ,
-				std::cout<<"\n MISSING4 i:"<<i<<" ex 0:"<<execute_list[i][0]<<" ex 1:"<<execute_list[i][1]<<" j:"<<j<<" IQ[4]:"<<IQ[j][4]<<" IQ[6]:"<<IQ[j][6];
+				//std::cout<<"\n MISSING4 i:"<<i<<" ex 0:"<<execute_list[i][0]<<" ex 1:"<<execute_list[i][1]<<" j:"<<j<<" IQ[4]:"<<IQ[j][4]<<" IQ[6]:"<<IQ[j][6];
 				if(execute_list[i][2] == IQ[j][4])
 				{
 					IQ[j][3] = 1;
@@ -652,13 +652,13 @@ void Execute() {
 			}
 			
 			
-			/////Forward bypassing for ROB/////////////
+			/////Forward bypassing for ROB/////////////                  //YOU ARE NOT SUPPOSED TO DO THIS
 			
-			for(int j=0;j<ROB_size;j++)
+			/*for(int j=0;j<ROB_size;j++)
 			{
-				if(ROB[j][1] == execute_list[i][0])
+				if(ROB[j][1] == execute_list[i][16])
 					ROB[j][3] = 1;                                //Setting ready bit in rob
-			}
+			}*/
 			
 			//////////////////////////////////////////
 			
@@ -780,15 +780,13 @@ void Execute() {
 	//0:src1,1:src2,2:dest,3:op_type,4:no_cyles_in_exe,5:completed?,
 	for(int i=0;i<execute_list_free_entry_pointer;i++)
 		std::cout<<"\n src1:"<<execute_list[i][0]<<" src2:"<<execute_list[i][1]<<" dest:"<<execute_list[i][2]<<" op_type:"<<execute_list[i][3]<<" no_cycles:"<<execute_list[i][4]<<" completed?:"<<execute_list[i][5];
+		std::cout<<" ex16:"<<execute_list[i][16];
 	
 }
 //////////////////////////////////////////////////////////////////////////////////////////////
 void Issue() {
 	
 	
-	std::cout<<"\n In Issue stage";
-	std::cout<<"\n In Issue stage";
-	std::cout<<"\n In Issue stage";
 	std::cout<<"\n In Issue stage";
 	
 	
@@ -801,8 +799,10 @@ void Issue() {
 	{
 		if(IQ[i][0] == 1)
 			IQ[i][11] += 1;
+		
 	}
 	///////////////////////////////////////////
+	
 	
 	execute_list_has_space = 1;                                                                //Initally assume we have space
 	
