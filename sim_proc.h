@@ -18,7 +18,7 @@ int ROB_can_accpet_new_bundle = 1;
 
 ///////////////////////////////////////
 
-unsigned int ticker = 1;
+unsigned int ticker = 0;
 
 typedef struct Pipeline{
 	
@@ -88,7 +88,7 @@ typedef struct Pipeline{
 
 
 //Reoder Buffer initialisation 
-unsigned long int** ROB = nullptr;
+long long int** ROB = nullptr;
 int ROB_head_pointer = 0;
 int ROB_tail_pointer = 0;
 int ROB_tail_phase = 0;

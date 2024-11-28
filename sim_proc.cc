@@ -14,7 +14,7 @@ int temp_control_signal = 0;
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-unsigned seq_no = 1;                              //Because I am too lazy to actually count it and the inst in ROB retired based on program order
+unsigned seq_no = 0;                              //Because I am too lazy to actually count it and the inst in ROB retired based on program order
 
 int main (int argc, char* argv[])
 {	
@@ -70,10 +70,10 @@ int main (int argc, char* argv[])
 	
 	
 	///////////////////////Assigning memory to the ROB array////////////////////////
-	ROB = new unsigned long int*[params.rob_size];
+	ROB = new long long int*[params.rob_size];
 	for(int i=0;i<params.rob_size;i++)
 	{	                          
-	ROB[i] = new unsigned long int[20];       //[][0] valid_dest; [][1] value(used as rob tag); [][2] dst; [][3] rdy; [][4] exc; [][5] mis; [][6] pc, [][7]src_og_1, [][8]src2_og,[][9]op_type,[][10]:valid inst;
+	ROB[i] = new long long int[20];       //[][0] valid_dest; [][1] value(used as rob tag); [][2] dst; [][3] rdy; [][4] exc; [][5] mis; [][6] pc, [][7]src_og_1, [][8]src2_og,[][9]op_type,[][10]:valid inst;
                                               //Use 10001, 10002 etc as rob tag and when accesing just do index%1000
 	}
 	ROB_size = params.rob_size;
@@ -224,6 +224,8 @@ void Rename()
 			ROB[ROB_tail_pointer][5] = 0;                                          //mis
 			ROB[ROB_tail_pointer][6] = pipeline_objects[i].PC_decode_rename;
 			ROB[ROB_tail_pointer][10] = 1;                                         //THis is valid instruction, needed when the pipeline is empty
+			ROB[ROB_tail_pointer][7] = pipeline_objects[i].src1_og_decode_rename;
+			ROB[ROB_tail_pointer][8] = pipeline_objects[i].src2_og_decode_rename;
 			
 			ROB_tail_pointer += 1;
 			ROB_tail_pointer = ROB_tail_pointer%ROB_size;                         //Because it is a circular FIFO
@@ -236,7 +238,7 @@ void Rename()
 		rename_can_accept_new_bundle = 0;
 	
 	
-	std::cout<<"\n Printing RMT Contents";
+	/*std::cout<<"\n Printing RMT Contents";
 	for(int i=0;i<67;i++)
 	{
 		if(RMT_valid_array[i] == 1)                                                         //Only printing entries with valid rob tag
@@ -246,7 +248,7 @@ void Rename()
 	std::cout<<"\n Printing ROB Contents";
 	for(int i=0;i<ROB_size;i++)
 		std::cout<<"\n Valid:"<<ROB[i][0]<<" robTag:"<<ROB[i][1]<<" dst:R"<<ROB[i][2]<<" rdy:"<<ROB[i][3]<<" exc:"<<ROB[i][4]<<" mis:"<<ROB[i][5]<<" pc:"<<ROB[i][6];
-	
+	*/
 }
 
 ///////////////////////////Advance_Cycle/////////////////////////
@@ -382,7 +384,7 @@ int Advance_Cycle(FILE *FP)
 	if(fscanf(FP, "%lx %d %d %d %d", &pc, &op_type, &dest, &src1, &src2) != EOF)
 		{
 		INST_FETCH_CNT += 1;
-		printf("%lx %d %d %d %d\n", pc, op_type, dest, src1, src2);
+		printf("%\n lx %d %d %d %d\n", pc, op_type, dest, src1, src2);
 		pipeline_objects[i].src1_fetch_decode = src1;
 		pipeline_objects[i].src2_fetch_decode = src2;
 		pipeline_objects[i].dest_fetch_decode = dest;
@@ -407,19 +409,22 @@ int Advance_Cycle(FILE *FP)
 	}
 	//////////////////////////////////////////////////////////////
 	
-	/*if(temp_control_signal == 25)
+	if(temp_control_signal == 25)
 		return 0;
 	else
 	{
 		temp_control_signal += 1;
 		return 1;
-	}*/
+	}
 	
-	if(INST_FETCH_CNT == INST_RETIRE_CNT)
+	/*if(INST_FETCH_CNT == INST_RETIRE_CNT)
+	{
+		std::cout<<"\n inst count:"<<INST_FETCH_CNT<<"  retire count:"<<INST_RETIRE_CNT;
 		return 0;
+	}
 	else
 		return 1;
-	
+	*/
 	
 	
 	ticker = ticker + 1;                                               //Updating the global clock
@@ -443,9 +448,22 @@ void Retire()
 	int inst_retired_this_cycle = 0;
 	std::cout<<"\n Printing ROB Contents";
 	for(int i=0;i<ROB_size;i++)
+	{
 		std::cout<<"\n Valid:"<<ROB[i][0]<<" robTag:"<<ROB[i][1]<<" dst:R"<<ROB[i][2]<<" rdy:"<<ROB[i][3]<<" exc:"<<ROB[i][4]<<" mis:"<<ROB[i][5]<<" pc:"<<ROB[i][6];
+		std::cout<<" other info:";
+		for(int j=7;j<17;j++)
+			std::cout<<" "<<ROB[i][j];
+	}
 	
-	std::cout<<"\n ROB_head_pointer:"<<ROB_head_pointer;
+	//std::cout<<"\n ROB_head_pointer:"<<ROB_head_pointer;
+	
+	//////////updating cycles spent in retire stage////////////
+	//ROB[][18] represent the cycles 
+	for(int i = 0 ; i<ROB_size; i++)
+	{
+		if(ROB[i][3] == 1)
+			ROB[i][18] += 1;
+	}
 	
 	for(int i = ROB_head_pointer ; i<ROB_size; i++)
 	{
@@ -455,11 +473,9 @@ void Retire()
 		if(inst_retired_this_cycle > WIDTH)
 			break;
 		
-		std::cout<<"\n ROB[ROB_head_pointer][3]:"<<ROB[ROB_head_pointer][3];
+		//std::cout<<"\n ROB[ROB_head_pointer][3]:"<<ROB[ROB_head_pointer][3];
 		if(ROB[ROB_head_pointer][3] == 1)
 		{
-
-		
 			if(ROB[ROB_head_pointer][2] == 444)                                    //Checking for branch instructions
 			{}
 			
@@ -470,14 +486,35 @@ void Retire()
 			
 			ROB_can_accpet_new_bundle++;                                           //Reflects the number of free entries in the ROB
 			
+			int temp_cycles;
+			if(ROB[ROB_head_pointer][9] == 0)
+				temp_cycles = 1;
+			else if(ROB[ROB_head_pointer][9] == 1)
+				temp_cycles = 2;
+			else
+				temp_cycles = 5;
+			
+			
+			int temp_dest;
+			if(ROB[ROB_head_pointer][2] == 444)
+				temp_dest = -1;
+			else
+				temp_dest = ROB[ROB_head_pointer][2];
 			//[][0] valid_dest; [][1] value(used as rob tag); [][2] dst; [][3] rdy; [][4] exc; [][5] mis; [][6] pc, [][7]src_og_1, [][8]src2_og,[][9]op_type,[][10]:valid inst;
 			// 11:no_clk_iq,12:no_clk_dispatch,13:no_clk_rrd,14:no_clk_rerd,15:no_clk_drerd,16:entry_clk_fdrerd 17:rob_tag;
-			std::cout<<"\n"<<seq_no<<"  fu{"<<ROB[ROB_head_pointer][9]<<"}"<<"  src{";
+			std::cout<<"\n"<<seq_no<<"  fu{"<<ROB[ROB_head_pointer][9]<<"}"<<"  src{"<<ROB[ROB_head_pointer][7]<<","<<ROB[ROB_head_pointer][8]<<"}";
+			std::cout<<" dst{"<<temp_dest<<"}"<<" FE{"<<ROB[ROB_head_pointer][16]<<",1}"<<" DE{"<<ROB[ROB_head_pointer][16]+1<<","<<ROB[ROB_head_pointer][15]<<"}";
+			std::cout<<" RN{"<<ROB[ROB_head_pointer][15] + ROB[ROB_head_pointer][16] +1<<","<<ROB[ROB_head_pointer][14]<<"} RR{"<<ROB[ROB_head_pointer][15] + ROB[ROB_head_pointer][16] +1 + ROB[ROB_head_pointer][14] <<","<<ROB[ROB_head_pointer][13]<<"}";
+			std::cout<<" DI{"<<ROB[ROB_head_pointer][15] + ROB[ROB_head_pointer][16] +1 + ROB[ROB_head_pointer][14] + ROB[ROB_head_pointer][13]<<","<<ROB[ROB_head_pointer][12]<<"} IS{"<<ROB[ROB_head_pointer][15] + ROB[ROB_head_pointer][16] +1 + ROB[ROB_head_pointer][14] + ROB[ROB_head_pointer][13] + ROB[ROB_head_pointer][12]<<","<<ROB[ROB_head_pointer][11]<<"}";
+			std::cout<<" EX{"<<ROB[ROB_head_pointer][15] + ROB[ROB_head_pointer][16] +1 + ROB[ROB_head_pointer][14] + ROB[ROB_head_pointer][13] + ROB[ROB_head_pointer][12] + ROB[ROB_head_pointer][11]<<","<<temp_cycles<<"}";
+			std::cout<<" WB{"<<ROB[ROB_head_pointer][15] + ROB[ROB_head_pointer][16] +1 + ROB[ROB_head_pointer][14] + ROB[ROB_head_pointer][13] + ROB[ROB_head_pointer][12] + ROB[ROB_head_pointer][11] + temp_cycles<<",1}";
+			std::cout<<" RT{"<<ROB[ROB_head_pointer][15] + ROB[ROB_head_pointer][16] +1 + ROB[ROB_head_pointer][14] + ROB[ROB_head_pointer][13] + ROB[ROB_head_pointer][12] + ROB[ROB_head_pointer][11] + temp_cycles+1<<","<<ROB[ROB_head_pointer][18]<<"}";
 			
 			ROB_head_pointer += 1;
 			ROB_head_pointer = ROB_head_pointer%ROB_size;
 			INST_RETIRE_CNT += 1;
 			inst_retired_this_cycle += 1;
+			seq_no += 1;
 			
 			/*for(int j=0;j<writeback_free_entry_pointer;j++)                       //Idk why i wrote this but then also it shout be be before updating the head pointer
 			{
@@ -503,18 +540,18 @@ void Writeback() {
 		{
 			
 			//std::cout<<"\n WritebackBuffer: "<<WriteBack_buffer[i][16]<<"  ROB:"<<ROB[j][1]<<"\n";
-			if(WriteBack_buffer[i][16] == ROB[j][1])
+			if((WriteBack_buffer[i][16] == ROB[j][1])&&(ROB[j][10] == 1))
 			{
 				ROB[j][3] = 1;                                                    //Setting ready bit in ROB
 				
 				//Writing the data into the ROB to print it out
 				// 11:no_cycles_iq,12:no_clk_dispatch,13:no_clk_rrd,14:no_clk_rerd,15:no_clk_drerd,16:entry_clk_fdrerd 17:rob_tag;
-				ROB[j][11] = WriteBack_buffer[i][11];
-				ROB[j][12] = WriteBack_buffer[i][12];
-				ROB[j][13] = WriteBack_buffer[i][13];
-				ROB[j][14] = WriteBack_buffer[i][14];
-				ROB[j][15] = WriteBack_buffer[i][15];
-				ROB[j][16] = WriteBack_buffer[i][16];
+				ROB[j][11] = WriteBack_buffer[i][10];
+				ROB[j][12] = WriteBack_buffer[i][11];
+				ROB[j][13] = WriteBack_buffer[i][12];
+				ROB[j][14] = WriteBack_buffer[i][13];
+				ROB[j][15] = WriteBack_buffer[i][14];
+				ROB[j][16] = WriteBack_buffer[i][15];
 				
 			}
 				
@@ -1063,6 +1100,11 @@ void Initialisation_function()
 	pipeline_objects[i].src1_ready = -2;
    	pipeline_objects[i].src2_ready = -2;
    	pipeline_objects[i].dest_ready = -2;
+	
+	
+	
+	///////////Timing///////////
+	pipeline_objects[i].no_clk_rr = 1;
 	
 	
 	
