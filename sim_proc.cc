@@ -226,6 +226,7 @@ void Rename()
 			ROB[ROB_tail_pointer][10] = 1;                                         //THis is valid instruction, needed when the pipeline is empty
 			ROB[ROB_tail_pointer][7] = pipeline_objects[i].src1_og_decode_rename;
 			ROB[ROB_tail_pointer][8] = pipeline_objects[i].src2_og_decode_rename;
+			ROB[ROB_tail_pointer][9] = pipeline_objects[i].op_type_decode_rename;
 			
 			ROB_tail_pointer += 1;
 			ROB_tail_pointer = ROB_tail_pointer%ROB_size;                         //Because it is a circular FIFO
@@ -407,6 +408,8 @@ int Advance_Cycle(FILE *FP)
 		}
 	}
 	}
+	
+	ticker = ticker + 1;          //Updating the global clock
 	//////////////////////////////////////////////////////////////
 	
 	if(temp_control_signal == 25)
@@ -426,8 +429,7 @@ int Advance_Cycle(FILE *FP)
 		return 1;
 	*/
 	
-	
-	ticker = ticker + 1;                                               //Updating the global clock
+	                                              //Updating the global clock
 	
 }
 
