@@ -15,6 +15,10 @@ int dispatch_can_accept_new_bundle = 1;
 int execute_list_has_space = 1;
 int ROB_can_accpet_new_bundle = 1;
 
+int EOF_reached = 0;
+
+int ROB_tag_start = 1000;
+
 
 ///////////////////////////////////////
 

@@ -196,15 +196,15 @@ void Rename()
 			ROB_can_accpet_new_bundle--;                                     //Reflects the number of free entries in the ROb
 			
 			
-			ROB[ROB_tail_pointer][1] = 1000 + ROB_tail_pointer + ROB_tail_phase;
+			ROB[ROB_tail_pointer][1] = ROB_tag_start;
 			pipeline_objects[i].ROB_tag_for_this_inst = ROB[ROB_tail_pointer][1];
 			
 			///////////Renaming the destination register in RMT///////////////////                   //This block is here because in earlier logic the tail_pointer is updated before assigning 
 			if(pipeline_objects[i].dest_decode_rename != -1)
 			{
-				RMT_tag[pipeline_objects[i].dest_decode_rename] = 1000 + ROB_tail_pointer + ROB_tail_phase;
+				RMT_tag[pipeline_objects[i].dest_decode_rename] = ROB_tag_start;
 				RMT_valid_array[pipeline_objects[i].dest_decode_rename] = 1;
-				pipeline_objects[i].temp_dest_rename_rr = 1000 + ROB_tail_pointer + ROB_tail_phase;
+				pipeline_objects[i].temp_dest_rename_rr = ROB_tag_start;
 			}
 			else{                                                                                             //For branch instruction
 				RMT_tag[pipeline_objects[i].dest_decode_rename] = pipeline_objects[i].dest_decode_rename;
@@ -212,7 +212,7 @@ void Rename()
 				pipeline_objects[i].temp_dest_rename_rr = pipeline_objects[i].dest_decode_rename;
 			}
 			
-			
+			ROB_tag_start += 1;
 			
 			///////////////////////////////////////////////////////////////////////
 			if(pipeline_objects[i].dest_decode_rename == -1)
@@ -379,7 +379,20 @@ int Advance_Cycle(FILE *FP)
 	if(decode_can_accept_new_bundle){                                              //Think about the case when decode has to accept fewer than WIDTH instructions
 
 		//printf("\n Instruction fetched in a given cycle\n");
-		
+	
+	if(EOF_reached)
+		{
+			for(int i = 0;i<WIDTH;i++)
+			{
+			pipeline_objects[i].src1_fetch_decode = -2;
+			pipeline_objects[i].src2_fetch_decode = -2;
+			pipeline_objects[i].dest_fetch_decode = -2;
+			pipeline_objects[i].op_type_fetch_decode = -2;
+			pipeline_objects[i].PC_fetch_decode = -2;
+			}
+		}	
+	
+	else{
 	for(int i =0; i<WIDTH;i++)
 	{
 	if(fscanf(FP, "%lx %d %d %d %d", &pc, &op_type, &dest, &src1, &src2) != EOF)
@@ -393,9 +406,11 @@ int Advance_Cycle(FILE *FP)
 		pipeline_objects[i].PC_fetch_decode = pc;
 		
 		pipeline_objects[i].entry_clk_fetch = ticker;
+		
 		}
 	else                                                              //When we have fetch less than width functions
 		{
+			EOF_reached = 1;
 		for(int j=i;j<WIDTH;j++)
 		{
 			pipeline_objects[j].src1_fetch_decode = -2;
@@ -408,14 +423,17 @@ int Advance_Cycle(FILE *FP)
 		}
 	}
 	}
+	}
 	
 	ticker = ticker + 1;          //Updating the global clock
 	//////////////////////////////////////////////////////////////
 	
-	if(temp_control_signal == 25)
+	if(temp_control_signal == 50)
 		return 0;
 	else
 	{
+		std::cout<<"\n inst count:"<<INST_FETCH_CNT<<"  retire count:"<<INST_RETIRE_CNT;
+		std::cout<<"\n ROB_head:"<<ROB_head_pointer<<" ROB_tail:"<<ROB_tail_pointer;
 		temp_control_signal += 1;
 		return 1;
 	}
@@ -427,9 +445,8 @@ int Advance_Cycle(FILE *FP)
 	}
 	else
 		return 1;
-	
 	*/
-	                                              //Updating the global clock
+
 	
 }
 
@@ -612,16 +629,17 @@ void Execute() {
 				
 				//Issue
 				//[][0] valid;[][1] age, [][2]dst tag, rs1 rdy, rs1 tag/value,rs2 rdy, rs2 tag/value ,
-				if(execute_list[i][0] == IQ[j][4])
+				std::cout<<"\n MISSING4 i:"<<i<<" ex 0:"<<execute_list[i][0]<<" ex 1:"<<execute_list[i][1]<<" j:"<<j<<" IQ[4]:"<<IQ[j][4]<<" IQ[6]:"<<IQ[j][6];
+				if(execute_list[i][2] == IQ[j][4])
 				{
 					IQ[j][3] = 1;
 				}
 				
-				if(execute_list[i][0] == IQ[j][6])
+				if(execute_list[i][2] == IQ[j][6])
 				{
 					IQ[j][5] = 1;
 				}
-				if(execute_list[i][1] == IQ[j][4])
+				/*if(execute_list[i][1] == IQ[j][4])
 				{
 					IQ[j][3] = 1;
 				}
@@ -630,6 +648,7 @@ void Execute() {
 				{
 					IQ[j][5] = 1;
 				}
+				*/
 			}
 			
 			
@@ -768,6 +787,9 @@ void Issue() {
 	
 	
 	std::cout<<"\n In Issue stage";
+	std::cout<<"\n In Issue stage";
+	std::cout<<"\n In Issue stage";
+	std::cout<<"\n In Issue stage";
 	
 	
 	
@@ -787,7 +809,7 @@ void Issue() {
 	for(int k=0;k<IQ_size;k++){                                                                //Trying to isse upto WIDTH instruction
 		if(number_of_issued_inst > WIDTH)
 			break;
-		if(execute_list_free_entry_pointer > (WIDTH*5))
+		if(execute_list_free_entry_pointer == (WIDTH*5))
 		{
 			execute_list_has_space = 0;
 			break;
@@ -802,6 +824,14 @@ void Issue() {
 				//10: no_clk_iq,11:no_clk_dispatch,12:no_clk_rrd,13:no_clk_rerd,14:no_clk_drerd,15:entry_clk_fdrerd,16:rob_tag
 				
 				// 12:no_clk_dispatch,13:no_clk_rrd,14:no_clk_rerd,15:no_clk_drerd,16:entry_clk_fdrerd,17: ROB_tag; //ISSUE_QUEUE
+				
+				
+				if(execute_list_free_entry_pointer == (WIDTH*5))
+				{
+					execute_list_has_space = 0;
+					break;
+				}
+
 														 
 				execute_list[execute_list_free_entry_pointer][0] = IQ[j][4];                       //renamed source 1
 				execute_list[execute_list_free_entry_pointer][1] = IQ[j][6];                       //renamed source 2
@@ -825,11 +855,15 @@ void Issue() {
 			
 				execute_list_free_entry_pointer += 1;
 				
+				
 				number_of_issued_inst += 1;
 				IQ_entry_pointer = IQ_entry_pointer -1;                                         //Reducing the pointer and age for new isnt
+				
+				
 				youngest -= 1;
 				for(int k=(j+1);k<(IQ_size);k++)                                                             //reducin the age of the instructions older than issued inst
 					IQ[k][1] = IQ[k][1] - 1;
+					
 				for(int k =j;k<(IQ_size-1);k++)                                                         //Moving up the issue queue
 				{
 					IQ[k][0] = IQ[k+1][0];
@@ -851,7 +885,7 @@ void Issue() {
 					IQ[k][16] = IQ[k+1][16];
 					IQ[k][17] = IQ[k+1][17];
 				}
-				IQ[IQ_size-2][0] = IQ[IQ_size-1][0];                         //Moving the issue queue up for the last element
+				/*IQ[IQ_size-2][0] = IQ[IQ_size-1][0];                         //Moving the issue queue up for the last element
 				IQ[IQ_size-2][1] = IQ[IQ_size-1][1];
 				IQ[IQ_size-2][2] = IQ[IQ_size-1][2];
 				IQ[IQ_size-2][3] = IQ[IQ_size-1][3];
@@ -868,7 +902,7 @@ void Issue() {
 				IQ[IQ_size-2][14] = IQ[IQ_size-1][14];
 				IQ[IQ_size-2][15] = IQ[IQ_size-1][15];
 				IQ[IQ_size-2][16] = IQ[IQ_size-1][16];
-				IQ[IQ_size-2][17] = IQ[IQ_size-1][17];
+				IQ[IQ_size-2][17] = IQ[IQ_size-1][17];*/
 				
 				
 				break;                                                        //Becase I want to start new iteration
@@ -960,6 +994,8 @@ void Dispatch() {
 		if(IQ[i][0] == 1){
 			std::cout<<"\n valid:"<<IQ[i][0]<<" age:"<<IQ[i][1]<<" dst tag:"<<IQ[i][2]<<" rs1 rdy:"<<IQ[i][3]<<" rs1 tag:"<<IQ[i][4]<<" rs2 rdy:"<<IQ[i][5]<<" rs2 tag:"<<IQ[i][6];
 			std::cout<<" src_og:R"<<IQ[i][7]<<" src2_og:R"<<IQ[i][8]<<" dest_og:R"<<IQ[i][9]<<" op_type:"<<IQ[i][10]<<" no_cycles:"<<IQ[i][11];
+			std::cout<<"  fetch_entry:"<<pipeline_objects[i].entry_clk_fdrer<<" decode:"<<pipeline_objects[i].no_clk_drer<<" rename:"<<pipeline_objects[i].no_clk_rer;
+			std::cout<<" rr:"<<pipeline_objects[i].no_clk_rr;
 		}
 }
 
@@ -1026,7 +1062,7 @@ void RegRead() {
 			int j = ROB_tail_pointer;
 			while(j != ROB_head_pointer)                                  //We have to go in reverse to find the most recent version
 			{
-				std::cout<<"\n Inside RR loop 2";
+				//std::cout<<"\n Inside RR loop 2";
 				if(ROB[j][1] == pipeline_objects[i].src2_rename_rr)           //Comparing  with the renamed values also
 				{
 					if(ROB[j][0] == 1)     
