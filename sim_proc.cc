@@ -385,7 +385,7 @@ int Advance_Cycle(FILE *FP)
 	if(fscanf(FP, "%lx %d %d %d %d", &pc, &op_type, &dest, &src1, &src2) != EOF)
 		{
 		INST_FETCH_CNT += 1;
-		printf("%\n lx %d %d %d %d\n", pc, op_type, dest, src1, src2);
+		printf("\n %lx %d %d %d %d\n", pc, op_type, dest, src1, src2);
 		pipeline_objects[i].src1_fetch_decode = src1;
 		pipeline_objects[i].src2_fetch_decode = src2;
 		pipeline_objects[i].dest_fetch_decode = dest;
@@ -427,8 +427,8 @@ int Advance_Cycle(FILE *FP)
 	}
 	else
 		return 1;
-	*/
 	
+	*/
 	                                              //Updating the global clock
 	
 }
@@ -967,7 +967,11 @@ void RegRead() {
 	
 	
 	std::cout<<"\n In RegRead stage";
-	
+	for(int i=0;i<WIDTH;i++)
+	{
+	std::cout<<"\n src1:"<<pipeline_objects[i].src1_rename_rr<<" src1_og:"<<pipeline_objects[i].src1_og_rename_rr;
+	std::cout<<"\n src2:"<<pipeline_objects[i].src2_rename_rr<<" src2_og:"<<pipeline_objects[i].src2_og_rename_rr;
+	}
 	
 	
 	if(dispatch_can_accept_new_bundle){
@@ -985,9 +989,11 @@ void RegRead() {
 			pipeline_objects[i].src1_ready = 1;
 		else if(pipeline_objects[i].src1_rename_rr >= 1000)
 		{
-			for(int j=ROB_tail_pointer;j>=0;j--)                                  //We have to go in reverse to find the most recent version
+			int j = ROB_tail_pointer;
+			while(j != ROB_head_pointer)                                 //We have to go in reverse to find the most recent version
 			{
-				if(ROB[j][2] == pipeline_objects[i].src1_og_rename_rr)           //Comparing with original values , can do it with the renamed values also
+				//std::cout<<"\n j:"<<j<<" ROB_tail:"<<ROB_tail_pointer<<" ROB_head:"<<ROB_head_pointer;
+				if(ROB[j][1] == pipeline_objects[i].src1_rename_rr)           //Comparing  with the renamed values also
 				{
 					if(ROB[j][0] == 1)     
 					{
@@ -1001,6 +1007,11 @@ void RegRead() {
 						}
 					}
 				}
+				
+				if(j == 0)
+					j = ROB_size - 1;                                      //To deal with circular FIFO
+				else
+					j = j - 1;
 			}
 		}
 		else                                                                      //Means the values are ready in the ARF
@@ -1010,11 +1021,13 @@ void RegRead() {
 		//////////////////////////////Source 2///////////////////////////
 		if(pipeline_objects[i].src2_og_rename_rr == -1)
 			pipeline_objects[i].src2_ready = 1;
-		else if(pipeline_objects[i].src2_og_rename_rr >= 1000)
+		else if(pipeline_objects[i].src2_rename_rr >= 1000)
 		{
-			for(int j=ROB_tail_pointer;j>=0;j--)                                  //We have to go in reverse to find the most recent version
+			int j = ROB_tail_pointer;
+			while(j != ROB_head_pointer)                                  //We have to go in reverse to find the most recent version
 			{
-				if(ROB[j][2] == pipeline_objects[i].src2_og_rename_rr)           //Comparing with original values , can do it with the renamed values also
+				std::cout<<"\n Inside RR loop 2";
+				if(ROB[j][1] == pipeline_objects[i].src2_rename_rr)           //Comparing  with the renamed values also
 				{
 					if(ROB[j][0] == 1)     
 					{
@@ -1028,6 +1041,11 @@ void RegRead() {
 						}
 					}
 				}
+				
+				if(j == 0)
+					j = ROB_size - 1;                                      //To deal with circular FIFO
+				else
+					j = j - 1;
 			}
 		}
 		else                                                                      //Means the values are ready in the ARF
