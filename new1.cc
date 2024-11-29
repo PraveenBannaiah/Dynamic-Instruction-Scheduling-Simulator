@@ -88,8 +88,8 @@ int main (int argc, char* argv[])
 	///////////////////////Assigning memory to the Issue Queue///////////////////////
 	IQ = new int*[params.iq_size];
 	for(int i=0;i<params.iq_size;i++)
-		IQ[i] = new int[20];                               //[][0] valid;[][1] age, [][2]dst tag, rs1 rdy, rs1 tag/value,rs2 rdy, rs2 tag/value , src1_og, src2_og, dest_og, op_type, no_cycles_in_iq
-	IQ_size = params.iq_size;                               // 12:no_clk_dispatch,13:no_clk_rrd,14:no_clk_rerd,15:no_clk_drerd,16:entry_clk_fdrerd 17:rob_tag;
+		IQ[i] = new int[20];                              
+	IQ_size = params.iq_size;                               
 
 	////////////////////////////////////////////////////////////////////////////////	
 	
@@ -228,10 +228,17 @@ void Rename()
 	{
 		if((RR_can_accept_new_bundle == 0)||(NO_ROB_free_entries<WIDTH))
 		{
+			RR_contains_new_bundle = 0;
+			
+			RN_can_accept_new_bundle = 0;
+			
+			for(int i = 0;i<WIDTH;i++)
+				pipeline_objects[i].no_clk_RN += 1;
 			return;
 		}
 		else
 		{
+			RR_contains_new_bundle = 1;
 			////////////////////////Assiging a rob entry for the instruction//////////////////////////
 			////ROB[tail][0] = Does it have a destionation register?
 			////ROB[tail][1] = ROB_tag
@@ -284,6 +291,8 @@ void Rename()
 				pipeline_objects[i].PC_RR = pipeline_objects[i].PC_RN;
 				pipeline_objects[i].no_clk_DERN = pipeline_objects[i].no_clk_decode;
 				pipeline_objects[i].entry_clk_FDERN = pipeline_objects[i].entry_clk_FD;
+				pipeline_objects[i].src1_RR_OG = pipeline_objects[i].src1_RN;
+				pipeline_objects[i].src2_RR_OG = pipeline_objects[i].src2_RN;
 				
 				
 				
@@ -299,6 +308,9 @@ void Rename()
 	}
 	else
 	{
+		RN_can_accept_new_bundle = 0;
+		
+		RR_contains_new_bundle = 0;
 		for(int i = 0;i<WIDTH;i++)
 			pipeline_objects[i].no_clk_RN += 1;
 	}
@@ -310,8 +322,119 @@ void Rename()
 	
 }
 
-void RegRead(){}
-void Dispatch(){}
+
+
+
+void RegRead()
+{
+	if((RR_contains_new_bundle)&&(DI_can_accept_new_bundle))
+	{
+		DI_contains_new_bundle = 1;
+		RR_can_accept_new_bundle = 1;
+		
+		for(int i =0 ;i<WIDTH; i++)
+		{
+			
+		/////////////////////////Asserting readiness of source 1/////////////////////////
+			if(pipeline_objects[i].src1_RR == -1)
+				pipeline_objects[i].src1_ready = 1;
+			else if(pipeline_objects[i].src1_RR >= 1000)
+			{
+				int j = ROB_tail_pointer;
+				while(1)
+				{
+					if((ROB[j][1] == pipeline_objects[i].src1_RR)&&(ROB[j][3] == 1)&&(ROB[j][0] == 1))
+						pipeline_objects[i].src1_ready = 1;
+					else
+						pipeline_objects[i].src1_ready = 0;
+						
+				}
+				
+				if(j == ROB_head_pointer)
+					break;
+				
+				if(j == 0)
+					j = ROB_size - 1;                                      //To deal with circular FIFO
+				else
+					j = j - 1;
+			}
+			else
+				pipeline_objects[i].src1_ready = 1;
+			
+			
+			
+		/////////////////////////Asserting readiness of source 2/////////////////////////
+			if(pipeline_objects[i].src2_RR == -1)
+				pipeline_objects[i].src2_ready = 1;
+			else if(pipeline_objects[i].src2_RR >= 1000)
+			{
+				int j = ROB_tail_pointer;
+				while(1)
+				{
+					if((ROB[j][1] == pipeline_objects[i].src2_RR)&&(ROB[j][3] == 1)&&(ROB[j][0] == 1))
+						pipeline_objects[i].src2_ready = 1;
+					else
+						pipeline_objects[i].src2_ready = 0;
+						
+				}
+				
+				if(j == ROB_head_pointer)
+					break;
+				
+				if(j == 0)
+					j = ROB_size - 1;                                      //To deal with circular FIFO
+				else
+					j = j - 1;
+			}
+			else
+				pipeline_objects[i].src2_ready = 1;
+			
+			
+		///////////////////////Assiging other signals//////////////////////////////////////////////
+			pipeline_objects[i].PC_DI = pipeline_objects[i].PC_RR;
+			pipeline_objects[i].no_clk_RNRR = pipeline_objects[i].no_clk_RN;
+			pipeline_objects[i].no_clk_DERNRR = pipeline_objects[i].no_clk_DERN;
+			pipeline_objects[i].entry_clk_FDERNRR = pipeline_objects[i].entry_clk_FDERN;
+			pipeline_objects[i].src1_DI_OG = pipeline_objects[i].src1_RR_OG;
+			pipeline_objects[i].src2_DI_OG = pipeline_objects[i].src2_RR_OG;
+			
+			
+		}
+		
+	}
+	else
+	{
+		DI_contains_new_bundle = 0;
+		RR_can_accept_new_bundle = 0;
+		
+		for(int i = 0;i<WIDTH;i++)
+			pipeline_objects[i].no_clk_RR += 1;
+	}
+}
+
+
+void Dispatch()
+{
+	if((DI_contains_new_bundle)&&((IQ_size - IQ_entry_pointer) >= WIDTH))
+	{
+		//IQ[entry][0] = Valid instructions
+		//IQ[entry][1] = Dest Tag, regardless of if it exists
+		//IQ[entry][2] = RS1 RDY
+		//IQ[entry][3] = RS1 TAG
+		//IQ[entry][4] = RS2 RDY
+		//IQ[entry][5] = RS2 TAG
+		//IQ[entry][6] = RS1 OG 
+		//IQ[entry][7] = RS2 OG
+		//IQ[entry][8] = NO_clock_IQ
+		//IQ[entry][9] = NO_clk_RR
+		//IQ[entry][10] = NO_CLK_RN
+		//IQ[entry][11] = NO_CLK_DE
+		//IQ[entry][12] = ENTRY_FE
+		
+	}
+}
+
+
 void Issue(){}
 void Execute(){}
 void Writeback(){}

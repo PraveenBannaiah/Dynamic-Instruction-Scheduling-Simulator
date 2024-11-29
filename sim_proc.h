@@ -22,9 +22,9 @@ int RR_can_accept_new_bundle = 1;
 int RR_contains_new_bundle;
 
 
+int DI_can_accept_new_bundle = 1;
+int DI_contains_new_bundle = 0;
 
-
-int dispatch_can_accept_new_bundle = 1;
 int execute_list_has_space = 1;
 
 
@@ -41,7 +41,7 @@ typedef struct Pipeline{
 	//DE
 	int src1_fetch_decode, src2_fetch_decode,dest_fetch_decode,op_type_fetch_decode, valid;     //valid is used for the case when we have fetch less than width inst
 	long long int PC_fetch_decode;
-	long int entry_clk_fetch; //Because the instruction will directly go into decode register                                                                          //Inistead of number of clock cycles 
+	long int entry_clk_fetch;                                                                          
 	
 	//RN
 	int src1_RN,src2_RN,dest_RN,op_type_RN;
@@ -50,46 +50,19 @@ typedef struct Pipeline{
 	
 	//RR
 	int src1_RR,src2_RR,dest_RR,op_type_RR;   //rr and rob both should have space for new bundle
-	unsigned int PC_RR;
-	unsigned int no_clk_RN, no_clk_DERN,entry_clk_FDERN;
+	int src1_RR_OG,src2_RR_OG;                //Original destination is present in the ROB
+	long long int PC_RR;
+    long int no_clk_RN, no_clk_DERN,entry_clk_FDERN;
 	
 	
-	int ROB_tag_for_this_inst;
-	
-	int temp_src1_rename_rr;                   //Because the data was going into rr and dispatch in the same clock cycles
-	int temp_src2_rename_rr;
-	int temp_dest_rename_rr;
-	
-	int src1_ready_re, src2_ready_re;
-	
-	
-	
-	//Register between rr and dispatch
-	int src1_rr_dispatch, src1_value, src2_rr_dispatch, src2_value,dest_rr_dispatch, op_type_rr_dispatch;
-	int src1_og_rr_dispatch,src2_og_rr_dispatch,dest_og_rr_dispatch;
-	unsigned int no_clk_rr, no_clk_rer,no_clk_drer,entry_clk_fdrer;
-	unsigned int PC_rr_dispatch;
+	//DI
+	int src1_DI,src2_DI,dest_DI,op_type_DI;
+	int src1_DI_OG,src2_DI_OG;
+	long int no_clk_RR, no_clk_RNRR,no_clk_DERNRR,entry_clk_FDERNRR;
+	long long int PC_DI;
 	int src1_ready, src2_ready, dest_ready;
 	//unsigned int no_clk_dispatch, no_clk_rrd, no_clk_rerd,no_clk_drerd,entry_clk_fdrerd;
-	
-	int ROB_tag_for_this_inst_rr;
-	
-	
-	//Register between dispatch and issue is the ISSUE QUEUE
-	//[][0] valid;[][1] age, [][2]dst tag, rs1 rdy, rs1 tag/value,rs2 rdy, rs2 tag/value , src1_og, src2_og, dest_og, op_type, no_cycles_in_iq
-	int src1_di_iq, src1_value_di,src2_di_iq,src2_value_di,dest_di_iq,op_type_di_iq;
-	int src1_og_di_iq,src2_og_di_iq,dest_og_di_iq;
-	unsigned int PC_di_iq;
-	unsigned int no_clk_dispatch, no_clk_rrd, no_clk_rerd,no_clk_drerd,entry_clk_fdrerd;
-	int src1_ready_dispatch, src2_ready_dispatch;
-	// 12:no_clk_dispatch,13:no_clk_rrd,14:no_clk_rerd,15:no_clk_drerd,16:entry_clk_fdrerd,17: ROB_tag;
-	int ROB_tag_for_this_inst_rr_d;
-	
-	
-	//Register between Issue and Execute i.e the execute list
-	//Execute list //0:src1,1:src2,2:dest,3:op_type,4:no_cyles_in_exe,5:completed?,6:src1_og,7:src2_og,8:src3_og,9:valid
-	unsigned int no_clk_issue, no_clk_di, no_clk_rrdi, no_clk_rerdi,no_clk_drerdi,entry_clk_fdrerdi;
-	int ROB_tag_for_this_inst_rr_d_i;
+
 	
 	/*int src1_exe1,src2_exe1,dest_exe1,op_type_exe1,no_cyles_in_ex_exe1,completed_exe1;   //We have five because a total of five instructions can be in flight in a given execute stage
 	int src1_exe2,src2_exe2,dest_exe2,op_type_exe2,no_cyles_in_ex_exe2,completed_exe2;
