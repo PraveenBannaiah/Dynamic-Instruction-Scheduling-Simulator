@@ -17,7 +17,7 @@ int ROB_can_accpet_new_bundle = 1;
 
 int EOF_reached = 0;
 
-int ROB_tag_start = 1000;
+int ROB_tag_start = 1001;
 
 
 ///////////////////////////////////////
@@ -48,6 +48,9 @@ typedef struct Pipeline{
 	int temp_src2_rename_rr;
 	int temp_dest_rename_rr;
 	
+	int src1_ready_re, src2_ready_re;
+	
+	
 	
 	//Register between rr and dispatch
 	int src1_rr_dispatch, src1_value, src2_rr_dispatch, src2_value,dest_rr_dispatch, op_type_rr_dispatch;
@@ -55,12 +58,18 @@ typedef struct Pipeline{
 	unsigned int no_clk_rr, no_clk_rer,no_clk_drer,entry_clk_fdrer;
 	unsigned int PC_rr_dispatch;
 	int src1_ready, src2_ready, dest_ready;
+	//unsigned int no_clk_dispatch, no_clk_rrd, no_clk_rerd,no_clk_drerd,entry_clk_fdrerd;
 	
 	int ROB_tag_for_this_inst_rr;
 	
+	
 	//Register between dispatch and issue is the ISSUE QUEUE
 	//[][0] valid;[][1] age, [][2]dst tag, rs1 rdy, rs1 tag/value,rs2 rdy, rs2 tag/value , src1_og, src2_og, dest_og, op_type, no_cycles_in_iq
+	int src1_di_iq, src1_value_di,src2_di_iq,src2_value_di,dest_di_iq,op_type_di_iq;
+	int src1_og_di_iq,src2_og_di_iq,dest_og_di_iq;
+	unsigned int PC_di_iq;
 	unsigned int no_clk_dispatch, no_clk_rrd, no_clk_rerd,no_clk_drerd,entry_clk_fdrerd;
+	int src1_ready_dispatch, src2_ready_dispatch;
 	// 12:no_clk_dispatch,13:no_clk_rrd,14:no_clk_rerd,15:no_clk_drerd,16:entry_clk_fdrerd,17: ROB_tag;
 	int ROB_tag_for_this_inst_rr_d;
 	

@@ -276,6 +276,7 @@ int Advance_Cycle(FILE *FP)
 			pipeline_objects[i].PC_rr_dispatch = pipeline_objects[i].PC_rename_rr;
 			
 			std::cout<<"\n DISPATCH lineNo:"<<i<<" op_type:"<<pipeline_objects[i].op_type_rr_dispatch<< " src1:"<< pipeline_objects[i].src1_rr_dispatch;
+			std::cout<<" src2:"<<pipeline_objects[i].src2_rr_dispatch<<" dest:"<<pipeline_objects[i].dest_rr_dispatch;
 			
 			////////////////////TIMING//////////////////////////////
 			pipeline_objects[i].no_clk_rer = pipeline_objects[i].no_clk_rename;
@@ -310,6 +311,7 @@ int Advance_Cycle(FILE *FP)
 			pipeline_objects[i].PC_rename_rr = pipeline_objects[i].PC_decode_rename;
 			
 			std::cout<<"\n REGREAD lineNo:"<<i<<" op_type:"<<pipeline_objects[i].op_type_rename_rr<< "src1:"<<pipeline_objects[i].src1_rename_rr;
+			std::cout<<"\n src2:"<<pipeline_objects[i].src2_rename_rr<<" dest:"<<pipeline_objects[i].dest_rename_rr;
 			
 			
 			
@@ -428,7 +430,7 @@ int Advance_Cycle(FILE *FP)
 	ticker = ticker + 1;          //Updating the global clock
 	//////////////////////////////////////////////////////////////
 	
-	if(temp_control_signal == 50)
+	if(temp_control_signal == 40)
 		return 0;
 	else
 	{
@@ -662,8 +664,18 @@ void Execute() {
 			
 			//////////////////////////////////////////
 			
+			////////Forward biasing for regread//////
+			for(int j=0;j<WIDTH;j++)
+			{
+				if((execute_list[i][0] == pipeline_objects[j].src1_rename_rr) || (execute_list[i][0] == pipeline_objects[j].src1_rename_rr))
+					pipeline_objects[j].src1_ready_re = 1;
+				
+				if((execute_list[i][0] == pipeline_objects[j].src2_rename_rr) || (execute_list[i][0] == pipeline_objects[j].src2_rename_rr))
+					pipeline_objects[j].src2_ready_re = 1;
+			}
 			
-			/////Forward bypassing to regread////////
+			
+			/////Forward bypassing to dispatch////////
 			for(int j=0;j<WIDTH;j++)
 			{
 				if((execute_list[i][0] == pipeline_objects[j].src1_rr_dispatch) || (execute_list[i][0] == pipeline_objects[j].src1_rr_dispatch))
@@ -689,6 +701,8 @@ void Execute() {
 			/*std::cout<<"\n xecute list pointer:"<<execute_list_free_entry_pointer;
 			std::cout<<"\n writeback_pointer:"<<writeback_free_entry_pointer;
 			std::cout<<"\nadfgad";*/
+			
+			std::cout<<"\n WRITING:"<<execute_list[i][16];
 			WriteBack_buffer[writeback_free_entry_pointer][0] = execute_list[i][0];
 			WriteBack_buffer[writeback_free_entry_pointer][1] = execute_list[i][1];
 			WriteBack_buffer[writeback_free_entry_pointer][2] = execute_list[i][2];
@@ -1006,7 +1020,8 @@ void RegRead() {
 	for(int i=0;i<WIDTH;i++)
 	{
 	std::cout<<"\n src1:"<<pipeline_objects[i].src1_rename_rr<<" src1_og:"<<pipeline_objects[i].src1_og_rename_rr;
-	std::cout<<"\n src2:"<<pipeline_objects[i].src2_rename_rr<<" src2_og:"<<pipeline_objects[i].src2_og_rename_rr;
+	std::cout<<" src2:"<<pipeline_objects[i].src2_rename_rr<<" src2_og:"<<pipeline_objects[i].src2_og_rename_rr;
+	std::cout<<" dest:"<<pipeline_objects[i].dest_rename_rr;
 	}
 	
 	
@@ -1049,6 +1064,10 @@ void RegRead() {
 				else
 					j = j - 1;
 			}
+			
+			//Wakeup
+			//if(pipeline_objects[i].src1_ready_re)
+			//	pipeline_objects[i].src1_ready = 1;
 		}
 		else                                                                      //Means the values are ready in the ARF
 			pipeline_objects[i].src1_ready = 1;  
@@ -1083,6 +1102,10 @@ void RegRead() {
 				else
 					j = j - 1;
 			}
+			
+			//Wakeup
+			//if(pipeline_objects[i].src2_ready_re)
+			//	pipeline_objects[i].src2_ready = 1;
 		}
 		else                                                                      //Means the values are ready in the ARF
 			pipeline_objects[i].src2_ready = 1; 
