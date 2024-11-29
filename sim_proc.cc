@@ -244,7 +244,7 @@ void Rename()
 		rename_can_accept_new_bundle = 0;
 	
 	
-	std::cout<<"\n Printing RMT Contents";
+	/*std::cout<<"\n Printing RMT Contents";
 	for(int i=0;i<67;i++)
 	{
 		if(RMT_valid_array[i] == 1)                                                         //Only printing entries with valid rob tag
@@ -254,7 +254,7 @@ void Rename()
 	std::cout<<"\n Printing ROB Contents";
 	for(int i=0;i<ROB_size;i++)
 		std::cout<<"\n Valid:"<<ROB[i][0]<<" robTag:"<<ROB[i][1]<<" dst:R"<<ROB[i][2]<<" rdy:"<<ROB[i][3]<<" exc:"<<ROB[i][4]<<" mis:"<<ROB[i][5]<<" pc:"<<ROB[i][6];
-	
+	*/
 }
 
 ///////////////////////////Advance_Cycle/////////////////////////
@@ -435,7 +435,7 @@ int Advance_Cycle(FILE *FP)
 	ticker = ticker + 1;          //Updating the global clock
 	//////////////////////////////////////////////////////////////
 	
-	/*if(temp_control_signal == 40)
+	if(temp_control_signal == 1155)
 		return 0;
 	else
 	{
@@ -443,7 +443,7 @@ int Advance_Cycle(FILE *FP)
 		std::cout<<"\n ROB_head:"<<ROB_head_pointer<<" ROB_tail:"<<ROB_tail_pointer;
 		temp_control_signal += 1;
 		return 1;
-	}*/
+	}
 	
 	if(INST_FETCH_CNT == INST_RETIRE_CNT)
 	{
@@ -451,7 +451,10 @@ int Advance_Cycle(FILE *FP)
 		return 0;
 	}
 	else
+	{
+		std::cout<<"\n inst count:"<<INST_FETCH_CNT<<"  retire count:"<<INST_RETIRE_CNT;
 		return 1;
+	}
 	
 
 	
@@ -462,7 +465,7 @@ int Advance_Cycle(FILE *FP)
 /////////////////////////////////Decode/////////////////////////////
 void Decode()
 {
-	std::cout<<"\n In decode stage";
+	//std::cout<<"\n In decode stage";
 }
 ////////////////////////////////////////////////////////////////////
 
@@ -472,7 +475,7 @@ void Retire()
 	std::cout<<"\n\n\n In retire stage";
 	
 	int inst_retired_this_cycle = 0;
-	std::cout<<"\n Printing ROB Contents";
+	//std::cout<<"\n Printing ROB Contents";
 	for(int i=0;i<ROB_size;i++)
 	{
 		std::cout<<"\n Valid:"<<ROB[i][0]<<" robTag:"<<ROB[i][1]<<" dst:R"<<ROB[i][2]<<" rdy:"<<ROB[i][3]<<" exc:"<<ROB[i][4]<<" mis:"<<ROB[i][5]<<" pc:"<<ROB[i][6];
@@ -481,7 +484,7 @@ void Retire()
 			std::cout<<" "<<ROB[i][j];
 	}
 	
-	//std::cout<<"\n ROB_head_pointer:"<<ROB_head_pointer;
+	std::cout<<"\n ROB_head_pointer:"<<ROB_head_pointer;
 	
 	//////////updating cycles spent in retire stage////////////
 	//ROB[][18] represent the cycles 
@@ -557,7 +560,7 @@ void Retire()
 
 void Writeback() {
 	
-	std::cout<<"\n In Writeback stage";
+	//std::cout<<"\n In Writeback stage";
 	
 	////I don't think we need to hold the values in write back buffer, after setting the ready bit in ROB we can let it over write ig
 	for(int i =0 ;i<=writeback_free_entry_pointer;i++)
@@ -590,7 +593,7 @@ void Writeback() {
 
 void Execute() {
 	
-	std::cout<<"\n In Execute stage";
+	//std::cout<<"\n In Execute stage";
 	wakeup_pointer = 0;
 	
 	///////////////////////Checking for completeness//////////////////
@@ -788,18 +791,20 @@ void Execute() {
 	
 	/////////////////////////////////////////////////////////////////////////////////////////
 	
-	std::cout<<"\n Printing the execute list in execute stage\n";
+	
+	
+	//std::cout<<"\n Printing the execute list in execute stage\n";
 	//0:src1,1:src2,2:dest,3:op_type,4:no_cyles_in_exe,5:completed?,
-	for(int i=0;i<execute_list_free_entry_pointer;i++)
-		std::cout<<"\n src1:"<<execute_list[i][0]<<" src2:"<<execute_list[i][1]<<" dest:"<<execute_list[i][2]<<" op_type:"<<execute_list[i][3]<<" no_cycles:"<<execute_list[i][4]<<" completed?:"<<execute_list[i][5];
-		std::cout<<" ex16:"<<execute_list[i][16];
+	//for(int i=0;i<execute_list_free_entry_pointer;i++)
+	//	std::cout<<"\n src1:"<<execute_list[i][0]<<" src2:"<<execute_list[i][1]<<" dest:"<<execute_list[i][2]<<" op_type:"<<execute_list[i][3]<<" no_cycles:"<<execute_list[i][4]<<" completed?:"<<execute_list[i][5];
+	//	std::cout<<" ex16:"<<execute_list[i][16];
 	
 }
 //////////////////////////////////////////////////////////////////////////////////////////////
 void Issue() {
 	
 	
-	std::cout<<"\n In Issue stage";
+	//std::cout<<"\n In Issue stage";
 	
 	
 	
@@ -933,7 +938,7 @@ void Issue() {
 ////////////////////////////////////////////////////////////////////////////////////
 void Dispatch() {
 	
-	std::cout<<"\n In Dispatch stage";
+	//std::cout<<"\n In Dispatch stage";
 	
 	
 	
@@ -1028,7 +1033,7 @@ void Dispatch() {
 void RegRead() {
 	
 	
-	std::cout<<"\n In RegRead stage";
+	//std::cout<<"\n In RegRead stage";
 	for(int i=0;i<WIDTH;i++)
 	{
 	std::cout<<"\n src1:"<<pipeline_objects[i].src1_rename_rr<<" src1_og:"<<pipeline_objects[i].src1_og_rename_rr;
