@@ -8,16 +8,27 @@ typedef struct proc_params{
 }proc_params;
 
 /////////////Control signal/////////////
-int decode_can_accept_new_bundle = 1;
-int rename_can_accept_new_bundle = 1;
-int rr_can_accept_new_bundle = 1;
+int DE_can_accept_new_bundle = 1;
+int DE_contains_new_bundle = 0;
+
+
+int RN_can_accept_new_bundle = 1;
+int RN_contains_new_bundle = 0;
+int NO_ROB_free_entries;
+
+
+
+int RR_can_accept_new_bundle = 1;
+int RR_contains_new_bundle;
+
+
+
+
 int dispatch_can_accept_new_bundle = 1;
 int execute_list_has_space = 1;
-int ROB_can_accpet_new_bundle = 1;
+
 
 int EOF_reached = 0;
-
-int ROB_tag_start = 1001;
 
 
 ///////////////////////////////////////
@@ -27,20 +38,21 @@ unsigned int ticker = 0;
 typedef struct Pipeline{
 	
 	
-	//Register between Fetch and decode stage
+	//DE
 	int src1_fetch_decode, src2_fetch_decode,dest_fetch_decode,op_type_fetch_decode, valid;     //valid is used for the case when we have fetch less than width inst
-	unsigned int PC_fetch_decode;
-	unsigned int entry_clk_fetch; //Because the instruction will directly go into decode register                                                                          //Inistead of number of clock cycles 
+	long long int PC_fetch_decode;
+	long int entry_clk_fetch; //Because the instruction will directly go into decode register                                                                          //Inistead of number of clock cycles 
 	
-	//Register between decode and rename stage
-	int src1_og_decode_rename,src2_og_decode_rename,dest_og_decode_rename,src1_decode_rename, src2_decode_rename,dest_decode_rename,op_type_decode_rename;
-	unsigned int PC_decode_rename;
-	unsigned int no_clk_decode, entry_clk_fd;
+	//RN
+	int src1_RN,src2_RN,dest_RN,op_type_RN;
+	long long int PC_RN;
+	long int no_clk_decode, entry_clk_FD;
 	
-	//Register between rename and register read stage
-	int src1_og_rename_rr,src2_og_rename_rr,dest_og_rename_rr,src1_rename_rr,src2_rename_rr,dest_rename_rr,op_type_rename_rr;   //rr and rob both should have space for new bundle
-	unsigned int PC_rename_rr;
-	unsigned int no_clk_rename, no_clk_dr,entry_clk_fdr;
+	//RR
+	int src1_RR,src2_RR,dest_RR,op_type_RR;   //rr and rob both should have space for new bundle
+	unsigned int PC_RR;
+	unsigned int no_clk_RN, no_clk_DERN,entry_clk_FDERN;
+	
 	
 	int ROB_tag_for_this_inst;
 	
@@ -106,6 +118,7 @@ int ROB_head_pointer = 0;
 int ROB_tail_pointer = 0;
 int ROB_tail_phase = 0;
 int ROB_size = 0;
+int ROB_tags = 1001;
 
 
 //Issue Queue initialisation
@@ -135,7 +148,7 @@ int wakeup_pointer;
 	
 
 //////////////////////////////Function Initialisations///////////////////////////////////////
-void Fetch();
+void Fetch(FILE*);
 	
 void Decode();
 
@@ -153,7 +166,7 @@ void Writeback();
 
 void Retire();
 
-int Advance_Cycle(FILE*);
+int Advance_Cycle();
 
 void Initialisation_function();
 ////////////////////////////////////////////////////////////////////////////////////////////
