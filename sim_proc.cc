@@ -110,6 +110,11 @@ int main (int argc, char* argv[])
 	for(int j=0;j<(WIDTH*5);j++)
 		execute_list[j] = new int[20];                   //0:src1,1:src2,2:dest,3:op_type,4:no_cyles_in_exe,5:completed?,6:src1_og,7:src2_og,8:src3_og,9:valid
 														 //10: no_clk_iq,11:no_clk_dispatch,12:no_clk_rrd,13:no_clk_rerd,14:no_clk_drerd,15:entry_clk_fdrerd,16:rob_tag
+														 
+	///////////////////Assiging memory to wakeup buffer////////////////////
+	Wakeup = new int[WIDTH*5];
+	wakeup_pointer = 0;
+	
 	
 	///////////////////////Main Loop////////////////////////////////////////////////
 	do {
@@ -430,7 +435,7 @@ int Advance_Cycle(FILE *FP)
 	ticker = ticker + 1;          //Updating the global clock
 	//////////////////////////////////////////////////////////////
 	
-	if(temp_control_signal == 40)
+	/*if(temp_control_signal == 40)
 		return 0;
 	else
 	{
@@ -438,16 +443,16 @@ int Advance_Cycle(FILE *FP)
 		std::cout<<"\n ROB_head:"<<ROB_head_pointer<<" ROB_tail:"<<ROB_tail_pointer;
 		temp_control_signal += 1;
 		return 1;
-	}
+	}*/
 	
-	/*if(INST_FETCH_CNT == INST_RETIRE_CNT)
+	if(INST_FETCH_CNT == INST_RETIRE_CNT)
 	{
 		std::cout<<"\n inst count:"<<INST_FETCH_CNT<<"  retire count:"<<INST_RETIRE_CNT;
 		return 0;
 	}
 	else
 		return 1;
-	*/
+	
 
 	
 }
@@ -586,7 +591,7 @@ void Writeback() {
 void Execute() {
 	
 	std::cout<<"\n In Execute stage";
-	
+	wakeup_pointer = 0;
 	
 	///////////////////////Checking for completeness//////////////////
 	for(int i =0;i<execute_list_free_entry_pointer;i++)
@@ -654,23 +659,16 @@ void Execute() {
 			}
 			
 			
-			/////Forward bypassing for ROB/////////////                  //YOU ARE NOT SUPPOSED TO DO THIS
-			
-			/*for(int j=0;j<ROB_size;j++)
-			{
-				if(ROB[j][1] == execute_list[i][16])
-					ROB[j][3] = 1;                                //Setting ready bit in rob
-			}*/
-			
-			//////////////////////////////////////////
+			Wakeup[wakeup_pointer] = execute_list[i][16];
+			wakeup_pointer += 1;
 			
 			////////Forward biasing for regread//////
 			for(int j=0;j<WIDTH;j++)
 			{
-				if((execute_list[i][0] == pipeline_objects[j].src1_rename_rr) || (execute_list[i][0] == pipeline_objects[j].src1_rename_rr))
+				if((execute_list[i][16] == pipeline_objects[j].src1_rename_rr) || (execute_list[i][16] == pipeline_objects[j].src1_rename_rr))
 					pipeline_objects[j].src1_ready_re = 1;
 				
-				if((execute_list[i][0] == pipeline_objects[j].src2_rename_rr) || (execute_list[i][0] == pipeline_objects[j].src2_rename_rr))
+				if((execute_list[i][16] == pipeline_objects[j].src2_rename_rr) || (execute_list[i][16] == pipeline_objects[j].src2_rename_rr))
 					pipeline_objects[j].src2_ready_re = 1;
 			}
 			
@@ -678,10 +676,10 @@ void Execute() {
 			/////Forward bypassing to dispatch////////
 			for(int j=0;j<WIDTH;j++)
 			{
-				if((execute_list[i][0] == pipeline_objects[j].src1_rr_dispatch) || (execute_list[i][0] == pipeline_objects[j].src1_rr_dispatch))
+				if((execute_list[i][16] == pipeline_objects[j].src1_rr_dispatch) || (execute_list[i][16] == pipeline_objects[j].src1_rr_dispatch))
 					pipeline_objects[j].src1_ready = 1;
 				
-				if((execute_list[i][0] == pipeline_objects[j].src2_rr_dispatch) || (execute_list[i][0] == pipeline_objects[j].src2_rr_dispatch))
+				if((execute_list[i][16] == pipeline_objects[j].src2_rr_dispatch) || (execute_list[i][16] == pipeline_objects[j].src2_rr_dispatch))
 					pipeline_objects[j].src2_ready = 1;
 			}
 			
@@ -956,10 +954,14 @@ void Dispatch() {
 			IQ[IQ_entry_pointer][1] = youngest;                                    //setting the age bit
 			youngest += 1;
 			IQ[IQ_entry_pointer][2] = pipeline_objects[i].dest_rr_dispatch;
+			
+			
 			if(pipeline_objects[i].src1_ready)
 				IQ[IQ_entry_pointer][3] = 1;
 			else
 				IQ[IQ_entry_pointer][3] = 0;
+			
+			
 			IQ[IQ_entry_pointer][4] = pipeline_objects[i].src1_rr_dispatch;
 			
 			if(pipeline_objects[i].src2_ready)
@@ -968,6 +970,16 @@ void Dispatch() {
 				IQ[IQ_entry_pointer][5] = 0;
 			
 			IQ[IQ_entry_pointer][6] = pipeline_objects[i].src2_rr_dispatch;
+			
+			
+			for(int k =0;k<wakeup_pointer;k++)
+			{
+				if(Wakeup[k] = pipeline_objects[i].src1_rr_dispatch)
+					IQ[IQ_entry_pointer][3] = 1;
+				if(Wakeup[k] = pipeline_objects[i].src2_rr_dispatch)
+					IQ[IQ_entry_pointer][5] = 1;
+			}
+			
 			
 			IQ[IQ_entry_pointer][7] = pipeline_objects[i].src1_og_rr_dispatch;                       //Storing value
 			IQ[IQ_entry_pointer][8] = pipeline_objects[i].src2_og_rr_dispatch;
@@ -1065,9 +1077,11 @@ void RegRead() {
 					j = j - 1;
 			}
 			
-			//Wakeup
-			//if(pipeline_objects[i].src1_ready_re)
-			//	pipeline_objects[i].src1_ready = 1;
+			for(int k =0;k<wakeup_pointer;k++)
+			{
+				if(Wakeup[k] = pipeline_objects[i].src1_rename_rr)
+					pipeline_objects[i].src1_ready = 1;
+			}
 		}
 		else                                                                      //Means the values are ready in the ARF
 			pipeline_objects[i].src1_ready = 1;  
@@ -1102,10 +1116,11 @@ void RegRead() {
 				else
 					j = j - 1;
 			}
-			
-			//Wakeup
-			//if(pipeline_objects[i].src2_ready_re)
-			//	pipeline_objects[i].src2_ready = 1;
+			for(int k =0;k<wakeup_pointer;k++)
+			{
+				if(Wakeup[k] = pipeline_objects[i].src2_rename_rr)
+						pipeline_objects[i].src2_ready = 1;
+			}
 		}
 		else                                                                      //Means the values are ready in the ARF
 			pipeline_objects[i].src2_ready = 1; 
