@@ -10,20 +10,24 @@ typedef struct proc_params{
 /////////////Control signal/////////////
 int DE_can_accept_new_bundle = 1;
 int DE_contains_new_bundle = 0;
+int DE_initial_entry = 1;
 
 
 int RN_can_accept_new_bundle = 1;
 int RN_contains_new_bundle = 0;
+int RN_initial_entry = 1;
 int NO_ROB_free_entries;
 
 
 
 int RR_can_accept_new_bundle = 1;
-int RR_contains_new_bundle;
+int RR_contains_new_bundle = 0;
+int RR_initial_entry = 1;
 
 
 int DI_can_accept_new_bundle = 1;
 int DI_contains_new_bundle = 0;
+int DI_initial_entry = 1;
 
 int execute_list_has_space = 1;
 

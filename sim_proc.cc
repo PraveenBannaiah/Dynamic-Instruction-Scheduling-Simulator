@@ -14,7 +14,7 @@ int temp_control_signal = 0;
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-unsigned seq_no = 0;                              //Because I am too lazy to actually count it and the inst in ROB retired based on program order
+unsigned seq_no = 0;                              
 
 int main (int argc, char* argv[])
 {	
@@ -283,6 +283,7 @@ int Advance_Cycle(FILE *FP)
 			std::cout<<"\n DISPATCH lineNo:"<<i<<" op_type:"<<pipeline_objects[i].op_type_rr_dispatch<< " src1:"<< pipeline_objects[i].src1_rr_dispatch;
 			std::cout<<" src2:"<<pipeline_objects[i].src2_rr_dispatch<<" dest:"<<pipeline_objects[i].dest_rr_dispatch;
 			
+			
 			////////////////////TIMING//////////////////////////////
 			pipeline_objects[i].no_clk_rer = pipeline_objects[i].no_clk_rename;
 			pipeline_objects[i].no_clk_drer = pipeline_objects[i].no_clk_dr;
@@ -294,7 +295,7 @@ int Advance_Cycle(FILE *FP)
 		//printf("\n Dispatch can not accept a new bundle");
 	
 	/////////////////////////Rename-RegRead///////////////////////////////
-	std::cout<<"\nrr_can_accept_new_bundle: "<<rr_can_accept_new_bundle;
+	//std::cout<<"\nrr_can_accept_new_bundle: "<<rr_can_accept_new_bundle;
 	if(rr_can_accept_new_bundle)
 	{
 		//printf("\n RR can accept a new bundle");
@@ -317,6 +318,19 @@ int Advance_Cycle(FILE *FP)
 			
 			std::cout<<"\n REGREAD lineNo:"<<i<<" op_type:"<<pipeline_objects[i].op_type_rename_rr<< "src1:"<<pipeline_objects[i].src1_rename_rr;
 			std::cout<<"\n src2:"<<pipeline_objects[i].src2_rename_rr<<" dest:"<<pipeline_objects[i].dest_rename_rr;
+			
+			for(int k=0;k<wakeup_pointer;k++)
+			{
+				if(Wakeup[k] == pipeline_objects[i].src1_rename_rr)
+					pipeline_objects[i].src1_ready_re = 1;
+				else
+					pipeline_objects[i].src1_ready_re = 0;
+				
+				if(Wakeup[k] == pipeline_objects[i].src2_rename_rr)
+					pipeline_objects[i].src2_ready_re = 1;
+				else
+					pipeline_objects[i].src2_ready_re = 0;
+			}
 			
 			
 			
@@ -435,7 +449,7 @@ int Advance_Cycle(FILE *FP)
 	ticker = ticker + 1;          //Updating the global clock
 	//////////////////////////////////////////////////////////////
 	
-	if(temp_control_signal == 1155)
+	if(temp_control_signal == 40)
 		return 0;
 	else
 	{
@@ -665,7 +679,7 @@ void Execute() {
 			Wakeup[wakeup_pointer] = execute_list[i][16];
 			wakeup_pointer += 1;
 			
-			////////Forward biasing for regread//////
+			/*////////Forward biasing for regread//////
 			for(int j=0;j<WIDTH;j++)
 			{
 				if((execute_list[i][16] == pipeline_objects[j].src1_rename_rr) || (execute_list[i][16] == pipeline_objects[j].src1_rename_rr))
@@ -685,7 +699,7 @@ void Execute() {
 				if((execute_list[i][16] == pipeline_objects[j].src2_rr_dispatch) || (execute_list[i][16] == pipeline_objects[j].src2_rr_dispatch))
 					pipeline_objects[j].src2_ready = 1;
 			}
-			
+			*/
 			/////////////////////////////////////////
 		}
 	}
@@ -793,11 +807,11 @@ void Execute() {
 	
 	
 	
-	//std::cout<<"\n Printing the execute list in execute stage\n";
+	std::cout<<"\n Printing the execute list in execute stage\n";
 	//0:src1,1:src2,2:dest,3:op_type,4:no_cyles_in_exe,5:completed?,
-	//for(int i=0;i<execute_list_free_entry_pointer;i++)
-	//	std::cout<<"\n src1:"<<execute_list[i][0]<<" src2:"<<execute_list[i][1]<<" dest:"<<execute_list[i][2]<<" op_type:"<<execute_list[i][3]<<" no_cycles:"<<execute_list[i][4]<<" completed?:"<<execute_list[i][5];
-	//	std::cout<<" ex16:"<<execute_list[i][16];
+	for(int i=0;i<execute_list_free_entry_pointer;i++)
+		std::cout<<"\n src1:"<<execute_list[i][0]<<" src2:"<<execute_list[i][1]<<" dest:"<<execute_list[i][2]<<" op_type:"<<execute_list[i][3]<<" no_cycles:"<<execute_list[i][4]<<" completed?:"<<execute_list[i][5];
+		std::cout<<" ex16:"<<execute_list[i][16];
 	
 }
 //////////////////////////////////////////////////////////////////////////////////////////////
@@ -962,7 +976,10 @@ void Dispatch() {
 			
 			
 			if(pipeline_objects[i].src1_ready)
+			{
+				std::cout<<"\n Ready case 1";
 				IQ[IQ_entry_pointer][3] = 1;
+			}
 			else
 				IQ[IQ_entry_pointer][3] = 0;
 			
@@ -970,19 +987,29 @@ void Dispatch() {
 			IQ[IQ_entry_pointer][4] = pipeline_objects[i].src1_rr_dispatch;
 			
 			if(pipeline_objects[i].src2_ready)
+			{
 				IQ[IQ_entry_pointer][5] = 1;
+				std::cout<<"\n Ready case 2";
+			}
 			else
 				IQ[IQ_entry_pointer][5] = 0;
 			
 			IQ[IQ_entry_pointer][6] = pipeline_objects[i].src2_rr_dispatch;
 			
-			
+			std::cout<<"Wakeup array in dispatch stage:";
 			for(int k =0;k<wakeup_pointer;k++)
 			{
-				if(Wakeup[k] = pipeline_objects[i].src1_rr_dispatch)
+				std::cout<<" "<<Wakeup[k];
+				if(Wakeup[k] == pipeline_objects[i].src1_rr_dispatch)
+				{
 					IQ[IQ_entry_pointer][3] = 1;
-				if(Wakeup[k] = pipeline_objects[i].src2_rr_dispatch)
+					std::cout<<"\n Ready case 4";
+				}
+				if(Wakeup[k] == pipeline_objects[i].src2_rr_dispatch)
+				{
 					IQ[IQ_entry_pointer][5] = 1;
+					std::cout<<"\n Ready case 3";
+				}
 			}
 			
 			
@@ -1050,7 +1077,9 @@ void RegRead() {
 		pipeline_objects[i].ROB_tag_for_this_inst_rr = pipeline_objects[i].ROB_tag_for_this_inst;
 		
 		//////////////////////////////////////////////////////////
-		
+		std::cout<<"\n Wakeup array is RegRead stage";
+		for(int k=0;k<wakeup_pointer;k++)
+		std::cout<<" "<<Wakeup[k];
 		
 		///////////////////////////Source 1/////////////////////////
 		if(pipeline_objects[i].src1_og_rename_rr == -1)
@@ -1082,9 +1111,12 @@ void RegRead() {
 					j = j - 1;
 			}
 			
+			if(pipeline_objects[i].src1_ready_re)
+				pipeline_objects[i].src1_ready = 1;
+			
 			for(int k =0;k<wakeup_pointer;k++)
 			{
-				if(Wakeup[k] = pipeline_objects[i].src1_rename_rr)
+				if(Wakeup[k] == pipeline_objects[i].src1_rename_rr)
 					pipeline_objects[i].src1_ready = 1;
 			}
 		}
@@ -1121,16 +1153,22 @@ void RegRead() {
 				else
 					j = j - 1;
 			}
+			
+			if(pipeline_objects[i].src2_ready_re)
+				pipeline_objects[i].src2_ready = 1;
+			
+			
 			for(int k =0;k<wakeup_pointer;k++)
 			{
-				if(Wakeup[k] = pipeline_objects[i].src2_rename_rr)
+				if(Wakeup[k] == pipeline_objects[i].src2_rename_rr)
 						pipeline_objects[i].src2_ready = 1;
 			}
 		}
 		else                                                                      //Means the values are ready in the ARF
 			pipeline_objects[i].src2_ready = 1; 
 			
-			
+		//for(int k=0;k<WIDTH;k++)
+		//std::cout<<"\n Ready check"<<pipeline_objects[k].src1_rename_rr<<" rdy:"<<pipeline_objects[i].src1_ready;
 		
 			
 			
