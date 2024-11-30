@@ -112,13 +112,16 @@ int main (int argc, char* argv[])
 	
 	/////////////////////////////////////////////////////////////////////////
 	
+	
 	///////////////////Assigning memory to the execute list////////////////////////
 	execute_list_free_entry_pointer = 0;
 	execute_list = new int*[WIDTH*5];                     //Becuase we can have 5 instructions at a time in the execute list
 	for(int j=0;j<(WIDTH*5);j++)
-		execute_list[j] = new int[20];                   //0:src1,1:src2,2:dest,3:op_type,4:no_cyles_in_exe,5:completed?,6:src1_og,7:src2_og,8:src3_og,9:valid
-														 //10: no_clk_iq,11:no_clk_dispatch,12:no_clk_rrd,13:no_clk_rerd,14:no_clk_drerd,15:entry_clk_fdrerd,16:rob_tag
+		execute_list[j] = new int[20];                   
 														 
+	///////////////////////////////////////////////////////////////////////////////
+
+
 	///////////////////Assiging memory to wakeup buffer////////////////////
 	Wakeup = new int[WIDTH*5];
 	wakeup_pointer = 0;
@@ -148,6 +151,10 @@ void Initialisation_function()
 	{
 		pipeline_objects[i].no_clk_decode = 1;
 		pipeline_objects[i].no_clk_RN = 1; 
+		pipeline_objects[i].no_clk_RR = 1;
+		pipeline_objects[i].no_clk_DI = 1;
+		
+		
 	}
 }
 
@@ -293,6 +300,7 @@ void Rename()
 				pipeline_objects[i].entry_clk_FDERN = pipeline_objects[i].entry_clk_FD;
 				pipeline_objects[i].src1_RR_OG = pipeline_objects[i].src1_RN;
 				pipeline_objects[i].src2_RR_OG = pipeline_objects[i].src2_RN;
+				pipeline_objects[i].dest_RR_OG = pipeline_objects[i].dest_RN;
 				
 				
 				
@@ -397,6 +405,11 @@ void RegRead()
 			pipeline_objects[i].entry_clk_FDERNRR = pipeline_objects[i].entry_clk_FDERN;
 			pipeline_objects[i].src1_DI_OG = pipeline_objects[i].src1_RR_OG;
 			pipeline_objects[i].src2_DI_OG = pipeline_objects[i].src2_RR_OG;
+			pipeline_objects[i].dest_DI_OG = pipeline_objects[i].dest_RR_OG;
+			pipeline_objects[i].src1_DI = pipeline_objects[i].src1_RR;
+			pipeline_objects[i].src2_DI = pipeline_objects[i].src2_RR;
+			pipeline_objects[i].dest_DI = pipeline_objects[i].dest_RR;
+			pipeline_objects[i].op_type_DI = pipeline_objects[i].op_type_RR;
 			
 			
 		}
@@ -417,6 +430,8 @@ void Dispatch()
 {
 	if((DI_contains_new_bundle)&&((IQ_size - IQ_entry_pointer) >= WIDTH))
 	{
+		DI_can_accept_new_bundle = 1;
+		
 		//IQ[entry][0] = Valid instructions
 		//IQ[entry][1] = Dest Tag, regardless of if it exists
 		//IQ[entry][2] = RS1 RDY
@@ -427,15 +442,161 @@ void Dispatch()
 		//IQ[entry][7] = RS2 OG
 		//IQ[entry][8] = NO_clock_IQ
 		//IQ[entry][9] = NO_clk_RR
-		//IQ[entry][10] = NO_CLK_RN
-		//IQ[entry][11] = NO_CLK_DE
-		//IQ[entry][12] = ENTRY_FE
-		
+		//IQ[entry][10] = NO_clk_RR
+		//IQ[entry][11] = NO_CLK_RN
+		//IQ[entry][12] = NO_CLK_DE
+		//IQ[entry][13] = ENTRY_FE
+		//IQ[entry][14] = AGE
+		//IQ{entry][15] = op_type
+		//IQ{entry][16] = dest_OG
+		for(int i = 0 ;i<WIDTH;i++)
+		{
+			IQ[IQ_entry_pointer][0] = 1;
+			IQ[IQ_entry_pointer][1] = pipeline_objects[i].dest_DI;
+			if(pipeline_objects[i].src1_ready == 1)
+				IQ[IQ_entry_pointer][2] = 1;
+			else
+				IQ[IQ_entry_pointer][2] = 0;
+			IQ[IQ_entry_pointer][3] = pipeline_objects[i].src1_DI;
+			if(pipeline_objects[i].src2_ready == 1)
+				IQ[IQ_entry_pointer][4] = 1;
+			else
+				IQ[IQ_entry_pointer][4] = 0;
+			IQ[IQ_entry_pointer][5] = pipeline_objects[i].src2_DI;
+			IQ[IQ_entry_pointer][6] = pipeline_objects[i].src1_DI_OG;
+			IQ[IQ_entry_pointer][7] = pipeline_objects[i].src2_DI_OG;
+			///////Update the number of cycles in iq in the issue stage
+			IQ[IQ_entry_pointer][9] = pipeline_objects[i].no_clk_DI;
+			IQ[IQ_entry_pointer][10] = pipeline_objects[i].no_clk_RR;
+			IQ[IQ_entry_pointer][11] = pipeline_objects[i].no_clk_RNRR;
+			IQ[IQ_entry_pointer][12] = pipeline_objects[i].no_clk_DERNRR;
+			IQ[IQ_entry_pointer][13] = pipeline_objects[i].entry_clk_FDERNRR;
+			IQ[IQ_entry_pointer][14] = youngest;
+			IQ[IQ_entry_pointer][15] = pipeline_objects[i].op_type_DI;
+			IQ[IQ_entry_pointer][15] = pipeline_objects[i].dest_RR_OG;
+			
+				
+			////////////////Updating the pointers and counters//////////////////////
+			IQ_entry_pointer += 1;
+			youngest += 1;	
+		}
+	}
+	else
+	{
+		DI_can_accept_new_bundle = 0;
+		for(int i = 0;i<WIDTH;i++)
+			pipeline_objects[i].no_clk_DI += 1;
 	}
 }
 
 
-void Issue(){}
+void Issue()
+{
+	int oldest =0;
+	int number_of_issued_inst = 0;
+	
+	////////Updating cyles in issue queue///////
+	for(int i=0;i<IQ_size;i++)
+	{
+		if(IQ[i][0] == 1)
+			IQ[i][8] += 1;
+	}
+	///////////////////////////////////////////
+	
+	for(int i=0;i<IQ_size;i++)
+	{
+		if((number_of_issued_inst == WIDTH)||(execute_list_free_entry_pointer == (WIDTH*5 - 1)))
+			break;
+		else
+		{
+			for(int j=0;j<IQ_size;j++)
+			{
+				oldest = j;
+				
+				if((IQ[j][0] == 1) && (IQ[j][14] == oldest) && (IQ[j][2] == 1) && (IQ[j][4] == 1))
+				{
+					if((number_of_issued_inst == WIDTH)||(execute_list_free_entry_pointer == (WIDTH*5 - 1)))
+						return;
+					
+					//IQ[entry][0] = Valid instructions
+					//IQ[entry][1] = Dest Tag, regardless of if it exists
+					//IQ[entry][2] = RS1 RDY
+					//IQ[entry][3] = RS1 TAG
+					//IQ[entry][4] = RS2 RDY
+					//IQ[entry][5] = RS2 TAG
+					//IQ[entry][6] = RS1 OG 
+					//IQ[entry][7] = RS2 OG
+					//IQ[entry][8] = NO_clock_IQ
+					//IQ[entry][9] = NO_clk_RR
+					//IQ[entry][10] = NO_clk_RR
+					//IQ[entry][11] = NO_CLK_RN
+					//IQ[entry][12] = NO_CLK_DE
+					//IQ[entry][13] = ENTRY_FE
+					//IQ[entry][14] = AGE
+					//IQ{entry][15] = op_type
+					//IQ{entry][16] = dest_OG
+					
+					execute_list[execute_list_free_entry_pointer][0] = IQ[j][1];														
+					execute_list[execute_list_free_entry_pointer][1] = IQ[j][2];
+					execute_list[execute_list_free_entry_pointer][2] = IQ[j][3];
+					execute_list[execute_list_free_entry_pointer][3] = IQ[j][4];
+					execute_list[execute_list_free_entry_pointer][4] = IQ[j][5];
+					execute_list[execute_list_free_entry_pointer][5] = IQ[j][6];
+					execute_list[execute_list_free_entry_pointer][6] = IQ[j][7];
+					execute_list[execute_list_free_entry_pointer][7] = IQ[j][8];
+					execute_list[execute_list_free_entry_pointer][8] = IQ[j][9];
+					execute_list[execute_list_free_entry_pointer][9] = IQ[j][10];
+					execute_list[execute_list_free_entry_pointer][10] = IQ[j][11];
+					execute_list[execute_list_free_entry_pointer][11] = IQ[j][12];
+					execute_list[execute_list_free_entry_pointer][12] = IQ[j][13];
+					execute_list[execute_list_free_entry_pointer][13] = IQ[j][14];
+					execute_list[execute_list_free_entry_pointer][14] = IQ[j][15];
+					execute_list[execute_list_free_entry_pointer][15] = IQ[j][16];
+					
+					
+					//////////////Reducing age of instructions older than j//////////////
+					for(int k=(j+1);k<(IQ_size);k++)                                                        
+					IQ[k][1] = IQ[k][1] - 1;
+				
+				
+					////////////Deleting the Issue Queue row/////////////////////
+					for(int k =j;k<(IQ_size-1);k++)                                                         //Moving up the issue queue
+					{
+						IQ[k][0] = IQ[k+1][0];
+						IQ[k][1] = IQ[k+1][1];
+						IQ[k][2] = IQ[k+1][2];
+						IQ[k][3] = IQ[k+1][3];
+						IQ[k][4] = IQ[k+1][4];
+						IQ[k][5] = IQ[k+1][5];
+						IQ[k][6] = IQ[k+1][6];
+						IQ[k][7] = IQ[k+1][7];
+						IQ[k][8] = IQ[k+1][8];
+						IQ[k][9] = IQ[k+1][9];
+						IQ[k][10] = IQ[k+1][10];
+						IQ[k][11] = IQ[k+1][11];
+						IQ[k][12] = IQ[k+1][12];
+						IQ[k][13] = IQ[k+1][13];
+						IQ[k][14] = IQ[k+1][14];
+						IQ[k][15] = IQ[k+1][15];
+						IQ[k][16] = IQ[k+1][16];
+					}
+					
+					IQ[IQ_size-1][0] = 0;                                                                   //Invalidating last entry
+					
+					
+					////////////////Updating the pointers and the counters//////////////////////
+					execute_list_free_entry_pointer += 1;
+					number_of_issued_inst += 1;
+					IQ_entry_pointer = IQ_entry_pointer -1;
+					youngest -= 1;
+				}
+			}
+		}
+	}
+}
+
+
+
 void Execute(){}
 void Writeback(){}
 void Retire(){}

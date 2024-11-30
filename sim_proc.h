@@ -50,19 +50,21 @@ typedef struct Pipeline{
 	
 	//RR
 	int src1_RR,src2_RR,dest_RR,op_type_RR;   //rr and rob both should have space for new bundle
-	int src1_RR_OG,src2_RR_OG;                //Original destination is present in the ROB
+	int src1_RR_OG,src2_RR_OG,dest_RR_OG;                //Original destination is present in the ROB
 	long long int PC_RR;
     long int no_clk_RN, no_clk_DERN,entry_clk_FDERN;
 	
 	
 	//DI
 	int src1_DI,src2_DI,dest_DI,op_type_DI;
-	int src1_DI_OG,src2_DI_OG;
+	int src1_DI_OG,src2_DI_OG,dest_DI_OG;
 	long int no_clk_RR, no_clk_RNRR,no_clk_DERNRR,entry_clk_FDERNRR;
 	long long int PC_DI;
 	int src1_ready, src2_ready, dest_ready;
 	//unsigned int no_clk_dispatch, no_clk_rrd, no_clk_rerd,no_clk_drerd,entry_clk_fdrerd;
 
+
+	long int no_clk_DI;
 	
 	/*int src1_exe1,src2_exe1,dest_exe1,op_type_exe1,no_cyles_in_ex_exe1,completed_exe1;   //We have five because a total of five instructions can be in flight in a given execute stage
 	int src1_exe2,src2_exe2,dest_exe2,op_type_exe2,no_cyles_in_ex_exe2,completed_exe2;
@@ -107,7 +109,7 @@ int RMT_tag[67];
 
 //Execute list
 int **execute_list = nullptr;
-	int execute_list_free_entry_pointer;
+int execute_list_free_entry_pointer;
 
 
 ///////////////Initialising writeback buffer/////////////////////
