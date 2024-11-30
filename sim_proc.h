@@ -30,7 +30,7 @@ int execute_list_has_space = 1;
 
 int EOF_reached = 0;
 
-
+long int seq_no = 0;  
 ///////////////////////////////////////
 
 unsigned int ticker = 0;

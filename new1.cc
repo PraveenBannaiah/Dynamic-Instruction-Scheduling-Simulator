@@ -13,10 +13,7 @@ pipeline* pipeline_objects;
 
 //////////////////////////////////////Temporary signals//////////////////////////////////////////////
 int temp_control_signal = 0;
-/////////////////////////////////////////////////////////////////////////////////////////////////////
-
-
-unsigned seq_no = 0;                              
+/////////////////////////////////////////////////////////////////////////////////////////////////////                            
 
 
 
@@ -708,6 +705,7 @@ void Writeback()
 				ROB[j][12] = WriteBack_buffer[i][10];        //CLK_RN
 				ROB[j][13] = WriteBack_buffer[i][11];        //CLK_DE
 				ROB[j][14] = WriteBack_buffer[i][12];        //ENTRY FE
+				ROB[i][15] = WriteBack_buffer[i][16];        //CLK_EX
 			}
 		}
 	}
@@ -720,6 +718,55 @@ void Writeback()
 
 void Retire()
 {
+	int inst_retired_this_cycle = 0;
+	
+	//////////updating cycles spent in retire stage////////////
+	//ROB[][16] represent the cycles 
+	for(int i = 0 ; i<ROB_size; i++)
+	{
+		if(ROB[i][3] == 1)
+			ROB[i][16] += 1;
+	}
+	
+	//////////Retiring///////////
+	do
+	{
+		if(inst_retired_this_cycle == WIDTH)
+			break;
+		
+		if(ROB[ROB_head_pointer][3] == 1)
+		{
+			//////////////////Updating the RMT/////////////////////////
+			if(RMT_tag[ROB[ROB_head_pointer][7]] == ROB[ROB_head_pointer][1])
+				RMT_valid_array[ROB[ROB_head_pointer][7]] = 0;
+			
+			
+			/////////////////Printing outputs/////////////////////////
+			int j = ROB_head_pointer;                                            //Used to mitigate writing long lines of code
+			
+			std::cout<<"\n "<<seq_no<<" fu{"<<ROB[ROB_head_pointer][8]<<"}";
+			std::cout<<" src{"<<ROB[ROB_head_pointer][5]<<","<<ROB[ROB_head_pointer][6]<<"} dst{"<<ROB[ROB_head_pointer][7]<<"}";
+			std::cout<<" FE{"<<ROB[ROB_head_pointer][14]<<",1}";
+			std::cout<<" DE{"<<ROB[ROB_head_pointer][14] + 1<<","<<ROB[ROB_head_pointer][13]<<"}";
+			std::cout<<" RN{"<<ROB[ROB_head_pointer][14] + 1 + ROB[j][13]<<","<<ROB[j][12]<<"}";
+			std::cout<<" RR{"<<ROB[ROB_head_pointer][14] + 1 + ROB[j][13] + ROB[j][12]<<","<<ROB[j][11]<<"}";
+			std::cout<<" DI{"<<ROB[ROB_head_pointer][14] + 1 + ROB[j][13] + ROB[j][12] + ROB[j][11]<<","<<ROB[j][10]<<"}";
+			std::cout<<" IQ{"<<ROB[ROB_head_pointer][14] + 1 + ROB[j][13] + ROB[j][12] + ROB[j][11] + ROB[j][10]<<","<<ROB[j][9]<<"}";
+			std::cout<<" EX{"<<ROB[ROB_head_pointer][14] + 1 + ROB[j][13] + ROB[j][12] + ROB[j][11] + ROB[j][10] + ROB[j][9]<<","<< ROB[j][15]<<"}";
+			std::cout<<" WB{"<<ROB[ROB_head_pointer][14] + 1 + ROB[j][13] + ROB[j][12] + ROB[j][11] + ROB[j][10] + ROB[j][9] + ROB[j][15]<<",1}";
+			std::cout<<" RT{"<<ROB[ROB_head_pointer][14] + 1 + ROB[j][13] + ROB[j][12] + ROB[j][11] + ROB[j][10] + ROB[j][9] + ROB[j][15] + 1<<","<<ROB[j][16]<<"}";
+			
+			
+			/////////////////Updating variables///////////////////////
+			NO_ROB_free_entries += 1;
+			inst_retired_this_cycle += 1;
+			ROB_head_pointer += 1;
+			ROB_head_pointer = ROB_head_pointer%ROB_size;
+			INST_RETIRE_CNT += 1;
+			seq_no += 1;
+			
+		}
+	}while(ROB_head_pointer != ROB_tail_pointer);
 	
 }
 
