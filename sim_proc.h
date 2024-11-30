@@ -52,6 +52,7 @@ typedef struct Pipeline{
 	int src1_RR,src2_RR,dest_RR,op_type_RR;   //rr and rob both should have space for new bundle
 	int src1_RR_OG,src2_RR_OG,dest_RR_OG;                //Original destination is present in the ROB
 	long long int PC_RR;
+	int src1_RR_ready, src2_RR_ready;
     long int no_clk_RN, no_clk_DERN,entry_clk_FDERN;
 	
 	

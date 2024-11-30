@@ -355,8 +355,6 @@ void RegRead()
 						pipeline_objects[i].src1_ready = 1;
 					else
 						pipeline_objects[i].src1_ready = 0;
-						
-				}
 				
 				if(j == ROB_head_pointer)
 					break;
@@ -365,6 +363,10 @@ void RegRead()
 					j = ROB_size - 1;                                      //To deal with circular FIFO
 				else
 					j = j - 1;
+				}
+				
+				if(pipeline_objects[i].src1_RR_ready == 1)
+					pipeline_objects[i].src1_ready = 1;
 			}
 			else
 				pipeline_objects[i].src1_ready = 1;
@@ -383,8 +385,6 @@ void RegRead()
 						pipeline_objects[i].src2_ready = 1;
 					else
 						pipeline_objects[i].src2_ready = 0;
-						
-				}
 				
 				if(j == ROB_head_pointer)
 					break;
@@ -393,6 +393,9 @@ void RegRead()
 					j = ROB_size - 1;                                      //To deal with circular FIFO
 				else
 					j = j - 1;
+				}
+				if(pipeline_objects[i].src2_RR_ready == 1)
+					pipeline_objects[i].src2_ready = 1;
 			}
 			else
 				pipeline_objects[i].src2_ready = 1;
@@ -441,7 +444,7 @@ void Dispatch()
 		//IQ[entry][6] = RS1 OG 
 		//IQ[entry][7] = RS2 OG
 		//IQ[entry][8] = NO_clock_IQ
-		//IQ[entry][9] = NO_clk_RR
+		//IQ[entry][9] = NO_clk_DI
 		//IQ[entry][10] = NO_clk_RR
 		//IQ[entry][11] = NO_CLK_RN
 		//IQ[entry][12] = NO_CLK_DE
@@ -449,6 +452,7 @@ void Dispatch()
 		//IQ[entry][14] = AGE
 		//IQ{entry][15] = op_type
 		//IQ{entry][16] = dest_OG
+	
 		for(int i = 0 ;i<WIDTH;i++)
 		{
 			IQ[IQ_entry_pointer][0] = 1;
@@ -527,7 +531,7 @@ void Issue()
 					//IQ[entry][6] = RS1 OG 
 					//IQ[entry][7] = RS2 OG
 					//IQ[entry][8] = NO_clock_IQ
-					//IQ[entry][9] = NO_clk_RR
+					//IQ[entry][9] = NO_clk_DI
 					//IQ[entry][10] = NO_clk_RR
 					//IQ[entry][11] = NO_CLK_RN
 					//IQ[entry][12] = NO_CLK_DE
@@ -535,6 +539,7 @@ void Issue()
 					//IQ[entry][14] = AGE
 					//IQ{entry][15] = op_type
 					//IQ{entry][16] = dest_OG
+					//EX{entry][16] = Latency
 					
 					execute_list[execute_list_free_entry_pointer][0] = IQ[j][1];														
 					execute_list[execute_list_free_entry_pointer][1] = IQ[j][2];
@@ -597,9 +602,126 @@ void Issue()
 
 
 
-void Execute(){}
-void Writeback(){}
-void Retire(){}
+void Execute()
+{
+	for(int i=0;i<execute_list_free_entry_pointer;i++)
+	{
+		//////////////////////////////Find instructions that are ending this cycle/////////////////////////////
+		if((execute_list[i][15]==0)&&(execute_list[i][16]==1) && ((execute_list[i][15]==1)&&(execute_list[i][16]==2))&&((execute_list[i][15]==2)&&(execute_list[i][16]==5)))
+		{
+			////////////////////////Wakeup procedures/////////////////////////
+			//////////IN IQ/////////
+			for(int j=0;j<IQ_size;j++)
+			{
+				if(IQ[j][0] == 1)
+				{
+					if(IQ[j][3] == execute_list[i][1])
+						IQ[j][2] = 1; 
+					if(IQ[j][5] == execute_list[i][1])
+						IQ[j][4] = 1; 
+				}
+			}
+			
+			/////////IN DI Bundle///
+			for(int j=0;j<WIDTH;j++)
+			{
+				if(pipeline_objects[j].src1_DI == execute_list[i][1])
+					pipeline_objects[j].src1_ready = 1;
+				if(pipeline_objects[j].src2_DI == execute_list[i][1])
+					pipeline_objects[j].src2_ready = 1;
+			}
+			
+			/////////IN RR Bundle///
+			for(int j=0;j<WIDTH;j++)
+			{
+				if(pipeline_objects[j].src1_RR == execute_list[i][1])
+					pipeline_objects[j].src1_RR_ready = 1;
+				else
+					pipeline_objects[j].src1_RR_ready = 0;                         
+				if(pipeline_objects[j].src2_RR == execute_list[i][1])
+					pipeline_objects[j].src2_RR_ready = 1;
+				else
+					pipeline_objects[j].src2_RR_ready = 1;
+			}
+			
+			
+			///////////////////Adding the instruction to the writeback buffer///////////
+			for(int j=0;j<17;j++)
+				WriteBack_buffer[writeback_free_entry_pointer][j] = execute_list[i][j];
+			
+			writeback_free_entry_pointer += 1;
+			
+			
+			
+			///////////////////Removing the instruction from the execute list////////////////////////
+			
+			for(int j=i;j<execute_list_free_entry_pointer - 1;j++)
+			{
+				execute_list[j][0] = execute_list[j+1][0];
+				execute_list[j][1] = execute_list[j+1][1];
+				execute_list[j][2] = execute_list[j+1][2];
+				execute_list[j][3] = execute_list[j+1][3];
+				execute_list[j][4] = execute_list[j+1][4];
+				execute_list[j][5] = execute_list[j+1][5];
+				execute_list[j][6] = execute_list[j+1][6];
+				execute_list[j][7] = execute_list[j+1][7];
+				execute_list[j][8] = execute_list[j+1][8];
+				execute_list[j][9] = execute_list[j+1][9];
+				execute_list[j][10] = execute_list[j+1][10];
+				execute_list[j][11] = execute_list[j+1][11];
+				execute_list[j][12] = execute_list[j+1][12];
+				execute_list[j][13] = execute_list[j+1][13];
+				execute_list[j][14] = execute_list[j+1][14];
+				execute_list[j][15] = execute_list[j+1][15];
+				execute_list[j][16] = execute_list[j+1][16];
+			}
+			execute_list_free_entry_pointer -= 1;
+			
+			
+			////////////////Updating the cycles//////////////////////
+			for(int i =0;i<execute_list_free_entry_pointer;i++)
+				execute_list[i][16] += 1;
+		}
+	}
+}
+
+
+
+void Writeback()
+{
+	for(int i =0;i<writeback_free_entry_pointer;i++)
+	{
+		for(int j=0;j<ROB_size;j++)
+		{
+			if(WriteBack_buffer[i][0] == ROB[j][1])
+			{
+				ROB[j][3] = 1;
+				
+				////////////Also passing other information to print////////////
+				ROB[j][5] = WriteBack_buffer[i][5];          //RS1 original
+				ROB[j][6] = WriteBack_buffer[i][6];          //RS2 origianl
+				ROB[j][7] = WriteBack_buffer[i][15];		 //Dest original
+				ROB[j][8] = WriteBack_buffer[i][14];         //op type
+				ROB[j][9] = WriteBack_buffer[i][7];          //CLK_IQ
+				ROB[j][10] = WriteBack_buffer[i][8];         //CLK_DI
+				ROB[j][11] = WriteBack_buffer[i][9];         //CLK_RR
+				ROB[j][12] = WriteBack_buffer[i][10];        //CLK_RN
+				ROB[j][13] = WriteBack_buffer[i][11];        //CLK_DE
+				ROB[j][14] = WriteBack_buffer[i][12];        //ENTRY FE
+			}
+		}
+	}
+	
+	//////Clearing the writeback buffer///////////
+	writeback_free_entry_pointer = 0;
+}
+
+
+
+void Retire()
+{
+	
+}
 
 
 
