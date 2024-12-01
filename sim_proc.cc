@@ -345,6 +345,8 @@ void Rename()
 				pipeline_objects[i].src1_RR_ready = 0;
 				pipeline_objects[i].src2_RR_ready = 0;
 				
+			//////////////////////Resetting Timers///////////////////////////////////
+				pipeline_objects[i].no_clk_decode = 1;
 				
 				
 			////////////////////Updating pointers and counters////////////////////////
@@ -460,6 +462,8 @@ void RegRead()
 			pipeline_objects[i].op_type_DI = pipeline_objects[i].op_type_RR;
 			
 			
+		////////////////Resetting Timiners//////////////////////////////////
+			pipeline_objects[i].no_clk_RN = 1;
 			
 		}
 		
@@ -525,6 +529,11 @@ void Dispatch()
 		 
 		for(int i = 0 ;i<WIDTH;i++)
 		{
+			
+			
+			
+			
+			
 			IQ[IQ_entry_pointer][0] = 1;
 			IQ[IQ_entry_pointer][1] = pipeline_objects[i].dest_DI;
 			
@@ -553,9 +562,15 @@ void Dispatch()
 			IQ[IQ_entry_pointer][14] = youngest;
 			IQ[IQ_entry_pointer][15] = pipeline_objects[i].op_type_DI;
 			IQ[IQ_entry_pointer][16] = pipeline_objects[i].dest_RR_OG;
-			IQ[IQ_entry_pointer][8] 0;
+			IQ[IQ_entry_pointer][8] = 0;
 			
 				
+			////////////////Resetting Timers///////////////////////////////////
+			pipeline_objects[i].no_clk_RR = 1;
+			pipeline_objects[i].no_clk_DI = 1;
+			
+			
+			
 			////////////////Updating the pointers and counters//////////////////////
 			IQ_entry_pointer += 1;
 			youngest += 1;	
@@ -835,7 +850,7 @@ void Writeback()
 				ROB[j][13] = WriteBack_buffer[i][11];        //CLK_DE
 				ROB[j][14] = WriteBack_buffer[i][12];        //ENTRY FE
 				ROB[j][15] = WriteBack_buffer[i][16];        //CLK_EX
-				ROB[j][16] = 0;
+				ROB[j][16] = 1;
 				
 			}
 		}
