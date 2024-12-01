@@ -239,8 +239,6 @@ void Decode()
 		}
 	}
 	
-	
-	std::cout<<"READY src1:"<<pipeline_objects[0].src1_ready;
 }
 
 
@@ -305,7 +303,7 @@ void Rename()
 			
 	
 			//////////////////////Renaming the source register/////////////////////////
-				std::cout<<"\n SOURCE BEFORE RENAMING:"<< pipeline_objects[i].src1_RN;
+		
 				if((pipeline_objects[i].src1_RN >= 0)&&(RMT_valid_array[pipeline_objects[i].src1_RN] == 1))
 					pipeline_objects[i].src1_RR = RMT_tag[pipeline_objects[i].src1_RN];
 				else
@@ -315,7 +313,7 @@ void Rename()
 					pipeline_objects[i].src2_RR = RMT_tag[pipeline_objects[i].src2_RN];
 				else
 					pipeline_objects[i].src2_RR = pipeline_objects[i].src2_RN;
-				std::cout<<"\n SOURCE AFTER RENAMING:"<< pipeline_objects[i].src1_RR;
+			
 			
 			////////////////////Renaming the destination register///////////////////////
 			
@@ -401,13 +399,12 @@ void RegRead()
 		
 		for(int i =0 ;i<WIDTH; i++)
 		{
-			
+			std::cout<<"\nASSERTING READINESS OF:"<<pipeline_objects[i].dest_RR<<" src1:"<<pipeline_objects[i].src1_RR<<" src2:"<<pipeline_objects[i].src2_RR;
 		/////////////////////////Asserting readiness of source 1/////////////////////////
 			if(pipeline_objects[i].src1_RR == -1)
 				pipeline_objects[i].src1_ready = 1;
 			else if(pipeline_objects[i].src1_RR >= 1000)
 			{
-				
 				for(int k=0;k<ROB_size;k++)
 				{
 					if((ROB[k][1] == pipeline_objects[i].src1_RR)&&(ROB[k][3] == 1)&&(ROB[k][0] == 1))
@@ -434,16 +431,20 @@ void RegRead()
 			{
 				for(int k=0;k<ROB_size;k++)
 				{
-					if((ROB[k][1] == pipeline_objects[k].src2_RR)&&(ROB[k][3] == 1)&&(ROB[k][0] == 1))
+					if((ROB[k][1] == pipeline_objects[i].src2_RR)&&(ROB[k][3] == 1)&&(ROB[k][0] == 1))
 					{
+						std::cout<<"\n CASE 1:";
 						pipeline_objects[i].src2_ready = 1;
 						break;
 					}
 					else
 						pipeline_objects[i].src2_ready = 0;
+					
 				}
 				if(pipeline_objects[i].src2_RR_ready == 1)
 					pipeline_objects[i].src2_ready = 1;
+				
+				std::cout<<"\n DEST:"<< pipeline_objects[i].dest_RR<<" src2:"<<pipeline_objects[i].src2_RR<<" RDY:"<<pipeline_objects[i].src2_ready;
 			}
 			else
 				pipeline_objects[i].src2_ready = 1;
@@ -697,7 +698,7 @@ void Execute()
 		if((execute_list[i][14]==0)&&(execute_list[i][16]==0) || ((execute_list[i][14]==1)&&(execute_list[i][16]==1)) || ((execute_list[i][14]==2)&&(execute_list[i][16]==4)))
 		{
 			
-			std::cout<<"Ready insts:"<<execute_list[i][0];
+			std::cout<<"\nReady insts:"<<execute_list[i][0];
 			
 			
 			////////////////////////Wakeup procedures/////////////////////////
@@ -718,7 +719,6 @@ void Execute()
 			{
 				if(pipeline_objects[j].src1_DI == execute_list[i][0])
 				{
-					
 					pipeline_objects[j].src1_ready = 1;
 				}
 				if(pipeline_objects[j].src2_DI == execute_list[i][0])
@@ -728,11 +728,12 @@ void Execute()
 			/////////IN RR Bundle///
 			for(int j=0;j<WIDTH;j++)
 			{
-				if(pipeline_objects[j].src1_RR == execute_list[i][15])                  //Becase the renamed values are not yet available so comparing with the og dest
+				
+				if(pipeline_objects[j].src1_RR == execute_list[i][0])                  //Becase the renamed values are not yet available so comparing with the og dest
 					pipeline_objects[j].src1_RR_ready = 1;
 				else
 					pipeline_objects[j].src1_RR_ready = 0;                         
-				if(pipeline_objects[j].src2_RR == execute_list[i][15])
+				if(pipeline_objects[j].src2_RR == execute_list[i][0])
 					pipeline_objects[j].src2_RR_ready = 1;
 				else
 					pipeline_objects[j].src2_RR_ready = 0;
@@ -903,7 +904,7 @@ int Advance_Cycle()
 	//////////////////////////////////////////////////////////////
 	
 	
-	/*if(INST_FETCH_CNT == INST_RETIRE_CNT)
+	if(INST_FETCH_CNT == INST_RETIRE_CNT)
 	{
 		std::cout<<"\n inst count:"<<INST_FETCH_CNT<<"  retire count:"<<INST_RETIRE_CNT;
 		std::cout<<"\n ROB_head:"<<ROB_head_pointer<<" ROB_tail:"<<ROB_tail_pointer;
@@ -914,11 +915,11 @@ int Advance_Cycle()
 		std::cout<<"\n inst count:"<<INST_FETCH_CNT<<"  retire count:"<<INST_RETIRE_CNT;
 		std::cout<<"\n ROB_head:"<<ROB_head_pointer<<" ROB_tail:"<<ROB_tail_pointer;
 		return 1;
-	}*/
+	}
 	
 	
 	
-	if(temp_control_signal == 50)
+	if(temp_control_signal == 100)
 		return 0;
 	else
 	{
