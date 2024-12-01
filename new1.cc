@@ -239,6 +239,8 @@ void Decode()
 		}
 	}
 	
+	
+	std::cout<<"READY src1:"<<pipeline_objects[0].src1_ready;
 }
 
 
@@ -301,9 +303,9 @@ void Rename()
 				ROB[ROB_tail_pointer][4] = pipeline_objects[i].PC_RN;	
 			
 			
-			
+	
 			//////////////////////Renaming the source register/////////////////////////
-
+				std::cout<<"\n SOURCE BEFORE RENAMING:"<< pipeline_objects[i].src1_RN;
 				if((pipeline_objects[i].src1_RN >= 0)&&(RMT_valid_array[pipeline_objects[i].src1_RN] == 1))
 					pipeline_objects[i].src1_RR = RMT_tag[pipeline_objects[i].src1_RN];
 				else
@@ -313,7 +315,7 @@ void Rename()
 					pipeline_objects[i].src2_RR = RMT_tag[pipeline_objects[i].src2_RN];
 				else
 					pipeline_objects[i].src2_RR = pipeline_objects[i].src2_RN;
-			
+				std::cout<<"\n SOURCE AFTER RENAMING:"<< pipeline_objects[i].src1_RR;
 			
 			////////////////////Renaming the destination register///////////////////////
 			
@@ -365,11 +367,13 @@ void Rename()
 			pipeline_objects[i].no_clk_RN += 1;
 	}
 	
-	
 	std::cout<<"\nPrinting ROB";
 	for(int i = 0;i<ROB_size;i++)
 		if(ROB[i] != 0)                                                        //If equal to zero then it there is not valid entry
 			std::cout<<"\n dest?:"<<ROB[i][0]<<" ROB_tag:"<<ROB[i][1]<<" dest:"<<ROB[i][2]<<" RDY?:"<<ROB[i][3]<<" PC:"<<ROB[i][4];
+			
+			
+	
 	
 }
 
@@ -403,21 +407,16 @@ void RegRead()
 				pipeline_objects[i].src1_ready = 1;
 			else if(pipeline_objects[i].src1_RR >= 1000)
 			{
-				int j = ROB_tail_pointer;
-				while(1)
+				
+				for(int k=0;k<ROB_size;k++)
 				{
-					if((ROB[j][1] == pipeline_objects[i].src1_RR)&&(ROB[j][3] == 1)&&(ROB[j][0] == 1))
+					if((ROB[k][1] == pipeline_objects[i].src1_RR)&&(ROB[k][3] == 1)&&(ROB[k][0] == 1))
+					{	
 						pipeline_objects[i].src1_ready = 1;
+						break;
+					}
 					else
 						pipeline_objects[i].src1_ready = 0;
-				
-				if(j == ROB_head_pointer)
-					break;
-				
-				if(j == 0)
-					j = ROB_size - 1;                                      //To deal with circular FIFO
-				else
-					j = j - 1;
 				}
 				
 				if(pipeline_objects[i].src1_RR_ready == 1)
@@ -433,21 +432,15 @@ void RegRead()
 				pipeline_objects[i].src2_ready = 1;
 			else if(pipeline_objects[i].src2_RR >= 1000)
 			{
-				int j = ROB_tail_pointer;
-				while(1)
+				for(int k=0;k<ROB_size;k++)
 				{
-					if((ROB[j][1] == pipeline_objects[i].src2_RR)&&(ROB[j][3] == 1)&&(ROB[j][0] == 1))
+					if((ROB[k][1] == pipeline_objects[k].src2_RR)&&(ROB[k][3] == 1)&&(ROB[k][0] == 1))
+					{
 						pipeline_objects[i].src2_ready = 1;
+						break;
+					}
 					else
 						pipeline_objects[i].src2_ready = 0;
-				
-				if(j == ROB_head_pointer)
-					break;
-				
-				if(j == 0)
-					j = ROB_size - 1;                                      //To deal with circular FIFO
-				else
-					j = j - 1;
 				}
 				if(pipeline_objects[i].src2_RR_ready == 1)
 					pipeline_objects[i].src2_ready = 1;
@@ -524,6 +517,7 @@ void Dispatch()
 		{
 			IQ[IQ_entry_pointer][0] = 1;
 			IQ[IQ_entry_pointer][1] = pipeline_objects[i].dest_DI;
+			
 			if(pipeline_objects[i].src1_ready == 1)
 				IQ[IQ_entry_pointer][2] = 1;
 			else
@@ -532,9 +526,12 @@ void Dispatch()
 			IQ[IQ_entry_pointer][3] = pipeline_objects[i].src1_DI;
 			
 			if(pipeline_objects[i].src2_ready == 1)
+			{
 				IQ[IQ_entry_pointer][4] = 1;
+			}
 			else
 				IQ[IQ_entry_pointer][4] = 0;
+			
 			IQ[IQ_entry_pointer][5] = pipeline_objects[i].src2_DI;
 			IQ[IQ_entry_pointer][6] = pipeline_objects[i].src1_DI_OG;
 			IQ[IQ_entry_pointer][7] = pipeline_objects[i].src2_DI_OG;
@@ -564,8 +561,9 @@ void Dispatch()
 	std::cout<<"\nPrinting issue queue";
 	for(int i=0;i<IQ_size;i++)
 	{
-		std::cout<<"\n Valid:"<<IQ[i][0]<<" dest:"<<IQ[i][1]<<" src1RDY:"<<IQ[i][2]<<" src1:"<<IQ[i][3]<<" src2RDY:"<<IQ[i][4]<<" src2:"<<IQ[i][5]<< " Cycles:"<<IQ[i][8];
+		std::cout<<"\n Valid:"<<IQ[i][0]<<" dest:"<<IQ[i][1]<<" src1RDY:"<<IQ[i][2]<<" src1:"<<IQ[i][3]<<" src2RDY:"<<IQ[i][4]<<" src2:"<<IQ[i][5]<< " Cycles:"<<IQ[i][8]<<" age:"<<IQ[i][14];
 	}
+
 }
 
 
@@ -636,16 +634,17 @@ void Issue()
 					execute_list[execute_list_free_entry_pointer][13] = IQ[j][14];
 					execute_list[execute_list_free_entry_pointer][14] = IQ[j][15];
 					execute_list[execute_list_free_entry_pointer][15] = IQ[j][16];
-					
+					execute_list[execute_list_free_entry_pointer][16] = 0;
 					
 					//////////////Reducing age of instructions older than j//////////////
 					for(int k=(j+1);k<(IQ_size);k++)                                                        
-					IQ[k][1] = IQ[k][1] - 1;
+						IQ[k][14] = IQ[k][14] - 1;
 				
 				
 					////////////Deleting the Issue Queue row/////////////////////
 					for(int k =j;k<(IQ_size-1);k++)                                                         //Moving up the issue queue
 					{
+						
 						IQ[k][0] = IQ[k+1][0];
 						IQ[k][1] = IQ[k+1][1];
 						IQ[k][2] = IQ[k+1][2];
@@ -691,13 +690,15 @@ void Issue()
 void Execute()
 {
 	std::cout<<"\nEXECUTE";
-	
-	
+
 	for(int i=0;i<execute_list_free_entry_pointer;i++)
 	{
 		//////////////////////////////Find instructions that are ending this cycle/////////////////////////////
-		if((execute_list[i][14]==0)&&(execute_list[i][16]==1) || ((execute_list[i][14]==1)&&(execute_list[i][16]==2)) || ((execute_list[i][14]==2)&&(execute_list[i][16]==5)))
+		if((execute_list[i][14]==0)&&(execute_list[i][16]==0) || ((execute_list[i][14]==1)&&(execute_list[i][16]==1)) || ((execute_list[i][14]==2)&&(execute_list[i][16]==4)))
 		{
+			
+			std::cout<<"Ready insts:"<<execute_list[i][0];
+			
 			
 			////////////////////////Wakeup procedures/////////////////////////
 			//////////IN IQ/////////
@@ -715,23 +716,26 @@ void Execute()
 			/////////IN DI Bundle///
 			for(int j=0;j<WIDTH;j++)
 			{
-				if(pipeline_objects[j].src1_DI == execute_list[i][1])
+				if(pipeline_objects[j].src1_DI == execute_list[i][0])
+				{
+					
 					pipeline_objects[j].src1_ready = 1;
-				if(pipeline_objects[j].src2_DI == execute_list[i][1])
+				}
+				if(pipeline_objects[j].src2_DI == execute_list[i][0])
 					pipeline_objects[j].src2_ready = 1;
 			}
 			
 			/////////IN RR Bundle///
 			for(int j=0;j<WIDTH;j++)
 			{
-				if(pipeline_objects[j].src1_RR == execute_list[i][1])
+				if(pipeline_objects[j].src1_RR == execute_list[i][15])                  //Becase the renamed values are not yet available so comparing with the og dest
 					pipeline_objects[j].src1_RR_ready = 1;
 				else
 					pipeline_objects[j].src1_RR_ready = 0;                         
-				if(pipeline_objects[j].src2_RR == execute_list[i][1])
+				if(pipeline_objects[j].src2_RR == execute_list[i][15])
 					pipeline_objects[j].src2_RR_ready = 1;
 				else
-					pipeline_objects[j].src2_RR_ready = 1;
+					pipeline_objects[j].src2_RR_ready = 0;
 			}
 			
 			
@@ -739,8 +743,9 @@ void Execute()
 			for(int j=0;j<17;j++)
 				WriteBack_buffer[writeback_free_entry_pointer][j] = execute_list[i][j];
 			
+			WriteBack_buffer[writeback_free_entry_pointer][16] += 1;
 			writeback_free_entry_pointer += 1;
-			
+			WriteBack_buffer[writeback_free_entry_pointer][16] += 1;
 			
 			
 			///////////////////Removing the instruction from the execute list////////////////////////
@@ -766,14 +771,16 @@ void Execute()
 				execute_list[j][16] = execute_list[j+1][16];
 			}
 			execute_list_free_entry_pointer -= 1;
+			
+			i = i -1;                                                    //Because we are reducing execute list pointer
 		}
 	}
+	
+	
 	
 	////////////////Updating the cycles//////////////////////
 	for(int i =0;i<execute_list_free_entry_pointer;i++)
 		execute_list[i][16] += 1;
-	
-	
 	
 	
 	
@@ -782,6 +789,7 @@ void Execute()
 	{
 		std::cout<<"\n tag:"<<execute_list[i][0]<<" cycles:"<<execute_list[i][16];
 	}
+	
 }
 
 
@@ -824,6 +832,7 @@ void Writeback()
 	
 	//////Clearing the writeback buffer///////////
 	writeback_free_entry_pointer = 0;
+	
 }
 
 
@@ -849,9 +858,11 @@ void Retire()
 		if(ROB[ROB_head_pointer][3] == 1)
 		{
 			//////////////////Updating the RMT/////////////////////////
-			if(RMT_tag[ROB[ROB_head_pointer][7]] == ROB[ROB_head_pointer][1])
+			if(RMT_tag[ROB[ROB_head_pointer][2]] == ROB[ROB_head_pointer][1])
+			{
 				if(ROB[ROB_head_pointer][0] == 1)                                         //Checking if the inst actually has a destination register
-					RMT_valid_array[ROB[ROB_head_pointer][7]] = 0;
+					RMT_valid_array[ROB[ROB_head_pointer][2]] = 0;
+			}
 			
 			
 			/////////////////Printing outputs/////////////////////////
@@ -903,11 +914,11 @@ int Advance_Cycle()
 		std::cout<<"\n inst count:"<<INST_FETCH_CNT<<"  retire count:"<<INST_RETIRE_CNT;
 		std::cout<<"\n ROB_head:"<<ROB_head_pointer<<" ROB_tail:"<<ROB_tail_pointer;
 		return 1;
-	}
-	*/
+	}*/
 	
 	
-	if(temp_control_signal == 25)
+	
+	if(temp_control_signal == 50)
 		return 0;
 	else
 	{
