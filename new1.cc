@@ -160,6 +160,7 @@ void Fetch(FILE *FP)
 	int op_type, dest, src1,src2;
 	long long int pc;
 	
+	std::cout<<"\nFETCH";
 	
 	if((DE_can_accept_new_bundle)&&(EOF_reached == 0))
 	{
@@ -193,6 +194,7 @@ void Fetch(FILE *FP)
 			break;
 			}
 		}
+		
 	}
 	else
 		DE_contains_new_bundle = 0;
@@ -201,9 +203,21 @@ void Fetch(FILE *FP)
 
 void Decode()
 {
+	std::cout<<"\nDECODE";
+	
+	if(DE_initial_entry)                                             //TO make sure the data flows for the first time
+	{
+		DE_can_accept_new_bundle = 1;
+		DE_initial_entry = 0;
+		return;
+	}
+	
 	if((DE_contains_new_bundle)&&(RN_can_accept_new_bundle))
 	{
 		RN_contains_new_bundle = 1;
+		DE_can_accept_new_bundle = 1;
+		
+		
 		for(int i=0;i<WIDTH;i++)
 		{
 			pipeline_objects[i].src1_RN = pipeline_objects[i].src1_fetch_decode;
@@ -217,19 +231,41 @@ void Decode()
 	}
 	else
 	{
+		DE_can_accept_new_bundle = 0;
 		RN_contains_new_bundle = 0;
 		for(int i=0;i<WIDTH;i++)
 		{
 			pipeline_objects[i].no_clk_decode += 1;
 		}
 	}
+	
 }
 
 
 void Rename()
 {
+	
+	std::cout<<"\nRENAME";
+	
+	if((RN_initial_entry)&&(DE_initial_entry == 0))                                             //TO make sure the data flows for the first time
+		{
+			RN_can_accept_new_bundle = 1;
+			RN_initial_entry = 0;
+			return;
+		}
+	else if(RN_initial_entry)
+		return;
+		
+	
 	if(RN_contains_new_bundle)
 	{
+		if(RR_initial_entry)
+		{
+			RR_initial_entry = 0;
+			DI_can_accept_new_bundle = 1;
+		}
+		
+		
 		if((RR_can_accept_new_bundle == 0)||(NO_ROB_free_entries<WIDTH))
 		{
 			RR_contains_new_bundle = 0;
@@ -285,8 +321,17 @@ void Rename()
 				
 				
 			////////////////////Updating the RMT/////////////////////////////////////////
-				
-				RMT_tag[pipeline_objects[i].dest_RN] = ROB[ROB_tail_pointer][1];
+			
+				if(pipeline_objects[i].dest_RN >= 0)
+				{					
+					RMT_tag[pipeline_objects[i].dest_RN] = ROB[ROB_tail_pointer][1];
+					RMT_valid_array[pipeline_objects[i].dest_RN] = 1;
+				}
+				else
+				{
+					RMT_tag[pipeline_objects[i].dest_RN] = pipeline_objects[i].dest_RN;
+					RMT_valid_array[pipeline_objects[i].dest_RN] = 0;
+				}
 				
 				
 				
@@ -320,6 +365,7 @@ void Rename()
 			pipeline_objects[i].no_clk_RN += 1;
 	}
 	
+	
 	std::cout<<"\nPrinting ROB";
 	for(int i = 0;i<ROB_size;i++)
 		if(ROB[i] != 0)                                                        //If equal to zero then it there is not valid entry
@@ -332,8 +378,20 @@ void Rename()
 
 void RegRead()
 {
+	std::cout<<"\nREGREAD";
+	
+	if((RR_initial_entry)&&(RN_initial_entry == 0))                                             //TO make sure the data flows for the first time
+	{
+		RR_can_accept_new_bundle = 1;
+		RR_initial_entry = 0;
+		return;
+	}
+	else if(RR_initial_entry)
+		return;
+	
 	if((RR_contains_new_bundle)&&(DI_can_accept_new_bundle))
 	{
+			
 		DI_contains_new_bundle = 1;
 		RR_can_accept_new_bundle = 1;
 		
@@ -423,11 +481,23 @@ void RegRead()
 		for(int i = 0;i<WIDTH;i++)
 			pipeline_objects[i].no_clk_RR += 1;
 	}
+	
 }
 
 
 void Dispatch()
 {
+	std::cout<<"\nDISPATCH";
+	
+	if((DI_initial_entry)&&(RR_initial_entry == 0))                                             //TO make sure the data flows for the first time
+	{
+		DI_can_accept_new_bundle = 1;
+		DI_initial_entry = 0;
+		return;
+	}
+	else if(DI_initial_entry)
+		return;
+		
 	if((DI_contains_new_bundle)&&((IQ_size - IQ_entry_pointer) >= WIDTH))
 	{
 		DI_can_accept_new_bundle = 1;
@@ -458,7 +528,9 @@ void Dispatch()
 				IQ[IQ_entry_pointer][2] = 1;
 			else
 				IQ[IQ_entry_pointer][2] = 0;
+			
 			IQ[IQ_entry_pointer][3] = pipeline_objects[i].src1_DI;
+			
 			if(pipeline_objects[i].src2_ready == 1)
 				IQ[IQ_entry_pointer][4] = 1;
 			else
@@ -466,7 +538,6 @@ void Dispatch()
 			IQ[IQ_entry_pointer][5] = pipeline_objects[i].src2_DI;
 			IQ[IQ_entry_pointer][6] = pipeline_objects[i].src1_DI_OG;
 			IQ[IQ_entry_pointer][7] = pipeline_objects[i].src2_DI_OG;
-			///////Update the number of cycles in iq in the issue stage
 			IQ[IQ_entry_pointer][9] = pipeline_objects[i].no_clk_DI;
 			IQ[IQ_entry_pointer][10] = pipeline_objects[i].no_clk_RR;
 			IQ[IQ_entry_pointer][11] = pipeline_objects[i].no_clk_RNRR;
@@ -474,7 +545,7 @@ void Dispatch()
 			IQ[IQ_entry_pointer][13] = pipeline_objects[i].entry_clk_FDERNRR;
 			IQ[IQ_entry_pointer][14] = youngest;
 			IQ[IQ_entry_pointer][15] = pipeline_objects[i].op_type_DI;
-			IQ[IQ_entry_pointer][15] = pipeline_objects[i].dest_RR_OG;
+			IQ[IQ_entry_pointer][16] = pipeline_objects[i].dest_RR_OG;
 			
 				
 			////////////////Updating the pointers and counters//////////////////////
@@ -488,11 +559,21 @@ void Dispatch()
 		for(int i = 0;i<WIDTH;i++)
 			pipeline_objects[i].no_clk_DI += 1;
 	}
+		
+		
+	std::cout<<"\nPrinting issue queue";
+	for(int i=0;i<IQ_size;i++)
+	{
+		std::cout<<"\n Valid:"<<IQ[i][0]<<" dest:"<<IQ[i][1]<<" src1RDY:"<<IQ[i][2]<<" src1:"<<IQ[i][3]<<" src2RDY:"<<IQ[i][4]<<" src2:"<<IQ[i][5]<< " Cycles:"<<IQ[i][8];
+	}
 }
 
 
 void Issue()
 {
+	std::cout<<"\nISSUE";
+	
+	
 	int oldest =0;
 	int number_of_issued_inst = 0;
 	
@@ -503,6 +584,7 @@ void Issue()
 			IQ[i][8] += 1;
 	}
 	///////////////////////////////////////////
+	
 	
 	for(int i=0;i<IQ_size;i++)
 	{
@@ -595,26 +677,37 @@ void Issue()
 			}
 		}
 	}
+	
+	
+	//std::cout<<"\nPrinting issue queue in ISSUE stage";
+	//for(int i=0;i<IQ_size;i++)
+	//{
+	//	std::cout<<"\n Valid:"<<IQ[i][0]<<" dest:"<<IQ[i][0]<<" src1RDY:"<<IQ[i][2]<<" src1:"<<IQ[i][3]<<" src2RDY:"<<IQ[i][4]<<" src2:"<<IQ[i][5];
+	//}
 }
 
 
 
 void Execute()
 {
+	std::cout<<"\nEXECUTE";
+	
+	
 	for(int i=0;i<execute_list_free_entry_pointer;i++)
 	{
 		//////////////////////////////Find instructions that are ending this cycle/////////////////////////////
-		if((execute_list[i][15]==0)&&(execute_list[i][16]==1) && ((execute_list[i][15]==1)&&(execute_list[i][16]==2))&&((execute_list[i][15]==2)&&(execute_list[i][16]==5)))
+		if((execute_list[i][14]==0)&&(execute_list[i][16]==1) || ((execute_list[i][14]==1)&&(execute_list[i][16]==2)) || ((execute_list[i][14]==2)&&(execute_list[i][16]==5)))
 		{
+			
 			////////////////////////Wakeup procedures/////////////////////////
 			//////////IN IQ/////////
 			for(int j=0;j<IQ_size;j++)
 			{
 				if(IQ[j][0] == 1)
 				{
-					if(IQ[j][3] == execute_list[i][1])
+					if(IQ[j][3] == execute_list[i][0])
 						IQ[j][2] = 1; 
-					if(IQ[j][5] == execute_list[i][1])
+					if(IQ[j][5] == execute_list[i][0])
 						IQ[j][4] = 1; 
 				}
 			}
@@ -673,12 +766,21 @@ void Execute()
 				execute_list[j][16] = execute_list[j+1][16];
 			}
 			execute_list_free_entry_pointer -= 1;
-			
-			
-			////////////////Updating the cycles//////////////////////
-			for(int i =0;i<execute_list_free_entry_pointer;i++)
-				execute_list[i][16] += 1;
 		}
+	}
+	
+	////////////////Updating the cycles//////////////////////
+	for(int i =0;i<execute_list_free_entry_pointer;i++)
+		execute_list[i][16] += 1;
+	
+	
+	
+	
+	
+	std::cout<<"\n Printing execute list";
+	for(int i=0;i<execute_list_free_entry_pointer;i++)
+	{
+		std::cout<<"\n tag:"<<execute_list[i][0]<<" cycles:"<<execute_list[i][16];
 	}
 }
 
@@ -686,6 +788,15 @@ void Execute()
 
 void Writeback()
 {
+	std::cout<<"\nWRITEBACK";
+	
+	
+	std::cout<<"\n Printing writeback buffer";
+	for(int i=0;i<writeback_free_entry_pointer;i++)
+	{
+		std::cout<<" tag:"<<WriteBack_buffer[i][0]<<" cycles:"<<WriteBack_buffer[i][16];
+	}
+	
 	for(int i =0;i<writeback_free_entry_pointer;i++)
 	{
 		for(int j=0;j<ROB_size;j++)
@@ -705,7 +816,8 @@ void Writeback()
 				ROB[j][12] = WriteBack_buffer[i][10];        //CLK_RN
 				ROB[j][13] = WriteBack_buffer[i][11];        //CLK_DE
 				ROB[j][14] = WriteBack_buffer[i][12];        //ENTRY FE
-				ROB[i][15] = WriteBack_buffer[i][16];        //CLK_EX
+				ROB[j][15] = WriteBack_buffer[i][16];        //CLK_EX
+				
 			}
 		}
 	}
@@ -718,6 +830,9 @@ void Writeback()
 
 void Retire()
 {
+	std::cout<<"\nRETIRE";
+	
+	
 	int inst_retired_this_cycle = 0;
 	
 	//////////updating cycles spent in retire stage////////////
@@ -729,29 +844,27 @@ void Retire()
 	}
 	
 	//////////Retiring///////////
-	do
-	{
-		if(inst_retired_this_cycle == WIDTH)
-			break;
-		
+	for(int i = 0;i<WIDTH;i++)                                                           //WE can retire upto WIDTH instructions in a given cycles
+	{		
 		if(ROB[ROB_head_pointer][3] == 1)
 		{
 			//////////////////Updating the RMT/////////////////////////
 			if(RMT_tag[ROB[ROB_head_pointer][7]] == ROB[ROB_head_pointer][1])
-				RMT_valid_array[ROB[ROB_head_pointer][7]] = 0;
+				if(ROB[ROB_head_pointer][0] == 1)                                         //Checking if the inst actually has a destination register
+					RMT_valid_array[ROB[ROB_head_pointer][7]] = 0;
 			
 			
 			/////////////////Printing outputs/////////////////////////
 			int j = ROB_head_pointer;                                            //Used to mitigate writing long lines of code
 			
 			std::cout<<"\n "<<seq_no<<" fu{"<<ROB[ROB_head_pointer][8]<<"}";
-			std::cout<<" src{"<<ROB[ROB_head_pointer][5]<<","<<ROB[ROB_head_pointer][6]<<"} dst{"<<ROB[ROB_head_pointer][7]<<"}";
+			std::cout<<" src{"<<ROB[ROB_head_pointer][5]<<","<<ROB[ROB_head_pointer][6]<<"} dst{"<<ROB[ROB_head_pointer][2]<<"}";
 			std::cout<<" FE{"<<ROB[ROB_head_pointer][14]<<",1}";
 			std::cout<<" DE{"<<ROB[ROB_head_pointer][14] + 1<<","<<ROB[ROB_head_pointer][13]<<"}";
 			std::cout<<" RN{"<<ROB[ROB_head_pointer][14] + 1 + ROB[j][13]<<","<<ROB[j][12]<<"}";
 			std::cout<<" RR{"<<ROB[ROB_head_pointer][14] + 1 + ROB[j][13] + ROB[j][12]<<","<<ROB[j][11]<<"}";
 			std::cout<<" DI{"<<ROB[ROB_head_pointer][14] + 1 + ROB[j][13] + ROB[j][12] + ROB[j][11]<<","<<ROB[j][10]<<"}";
-			std::cout<<" IQ{"<<ROB[ROB_head_pointer][14] + 1 + ROB[j][13] + ROB[j][12] + ROB[j][11] + ROB[j][10]<<","<<ROB[j][9]<<"}";
+			std::cout<<" IS{"<<ROB[ROB_head_pointer][14] + 1 + ROB[j][13] + ROB[j][12] + ROB[j][11] + ROB[j][10]<<","<<ROB[j][9]<<"}";
 			std::cout<<" EX{"<<ROB[ROB_head_pointer][14] + 1 + ROB[j][13] + ROB[j][12] + ROB[j][11] + ROB[j][10] + ROB[j][9]<<","<< ROB[j][15]<<"}";
 			std::cout<<" WB{"<<ROB[ROB_head_pointer][14] + 1 + ROB[j][13] + ROB[j][12] + ROB[j][11] + ROB[j][10] + ROB[j][9] + ROB[j][15]<<",1}";
 			std::cout<<" RT{"<<ROB[ROB_head_pointer][14] + 1 + ROB[j][13] + ROB[j][12] + ROB[j][11] + ROB[j][10] + ROB[j][9] + ROB[j][15] + 1<<","<<ROB[j][16]<<"}";
@@ -766,7 +879,8 @@ void Retire()
 			seq_no += 1;
 			
 		}
-	}while(ROB_head_pointer != ROB_tail_pointer);
+	}
+	
 	
 }
 
@@ -777,7 +891,23 @@ int Advance_Cycle()
 	ticker = ticker + 1;          //Updating the global clock
 	//////////////////////////////////////////////////////////////
 	
-	if(temp_control_signal == 20)
+	
+	/*if(INST_FETCH_CNT == INST_RETIRE_CNT)
+	{
+		std::cout<<"\n inst count:"<<INST_FETCH_CNT<<"  retire count:"<<INST_RETIRE_CNT;
+		std::cout<<"\n ROB_head:"<<ROB_head_pointer<<" ROB_tail:"<<ROB_tail_pointer;
+		return 0;
+	}
+	else
+	{
+		std::cout<<"\n inst count:"<<INST_FETCH_CNT<<"  retire count:"<<INST_RETIRE_CNT;
+		std::cout<<"\n ROB_head:"<<ROB_head_pointer<<" ROB_tail:"<<ROB_tail_pointer;
+		return 1;
+	}
+	*/
+	
+	
+	if(temp_control_signal == 25)
 		return 0;
 	else
 	{
