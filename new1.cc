@@ -196,8 +196,7 @@ void Fetch(FILE *FP)
 		}
 		
 	}
-	else
-		DE_contains_new_bundle = 0;
+
 }
 
 
@@ -212,9 +211,9 @@ void Decode()
 		return;
 	}
 	
-	if((DE_contains_new_bundle)&&(RN_can_accept_new_bundle))
+	
+	if(RN_can_accept_new_bundle)
 	{
-		RN_contains_new_bundle = 1;
 		DE_can_accept_new_bundle = 1;
 		
 		
@@ -255,30 +254,26 @@ void Rename()
 		}
 	else if(RN_initial_entry)
 		return;
-		
 	
-	if(RN_contains_new_bundle)
+	
+	if(RR_can_accept_new_bundle)
 	{
-		if(RR_initial_entry)
-		{
-			RR_initial_entry = 0;
-			DI_can_accept_new_bundle = 1;
-		}
-		
-		
-		if((RR_can_accept_new_bundle == 0)||(NO_ROB_free_entries<WIDTH))
-		{
-			RR_contains_new_bundle = 0;
 			
+		if(NO_ROB_free_entries<WIDTH)
+		{
 			RN_can_accept_new_bundle = 0;
+			
+			std::cout<<"\n Number of free rob entries:"<<NO_ROB_free_entries;
+			std::cout<<" RR_can_accept_new_bundle:"<<RR_can_accept_new_bundle;
+			//RN_can_accept_new_bundle = 0;
 			
 			for(int i = 0;i<WIDTH;i++)
 				pipeline_objects[i].no_clk_RN += 1;
-			return;
+			//return;
 		}
 		else
 		{
-			RR_contains_new_bundle = 1;
+			RN_can_accept_new_bundle = 1;
 			////////////////////////Assiging a rob entry for the instruction//////////////////////////
 			////ROB[tail][0] = Does it have a destionation register?
 			////ROB[tail][1] = ROB_tag
@@ -287,6 +282,10 @@ void Rename()
 			////ROB[tail][4] = PC
 			for(int i=0;i<WIDTH;i++)
 			{
+				if((pipeline_objects[i].PC_RN == -2)||(pipeline_objects[i].src1_RN == -2)||(pipeline_objects[i].src2_RN == -2)||(pipeline_objects[i].dest_RN == -2))
+					continue;                                                       //Implies not a valid instruction
+				
+				
 				if(pipeline_objects[i].dest_RN == -1)
 					ROB[ROB_tail_pointer][0] = -1;
 				else
@@ -343,6 +342,8 @@ void Rename()
 				pipeline_objects[i].src1_RR_OG = pipeline_objects[i].src1_RN;
 				pipeline_objects[i].src2_RR_OG = pipeline_objects[i].src2_RN;
 				pipeline_objects[i].dest_RR_OG = pipeline_objects[i].dest_RN;
+				pipeline_objects[i].src1_RR_ready = 0;
+				pipeline_objects[i].src2_RR_ready = 0;
 				
 				
 				
@@ -359,8 +360,7 @@ void Rename()
 	else
 	{
 		RN_can_accept_new_bundle = 0;
-		
-		RR_contains_new_bundle = 0;
+
 		for(int i = 0;i<WIDTH;i++)
 			pipeline_objects[i].no_clk_RN += 1;
 	}
@@ -391,15 +391,13 @@ void RegRead()
 	else if(RR_initial_entry)
 		return;
 	
-	if((RR_contains_new_bundle)&&(DI_can_accept_new_bundle))
-	{
-			
-		DI_contains_new_bundle = 1;
+	
+	if(DI_can_accept_new_bundle)
+	{	
 		RR_can_accept_new_bundle = 1;
 		
 		for(int i =0 ;i<WIDTH; i++)
 		{
-			std::cout<<"\nASSERTING READINESS OF:"<<pipeline_objects[i].dest_RR<<" src1:"<<pipeline_objects[i].src1_RR<<" src2:"<<pipeline_objects[i].src2_RR;
 		/////////////////////////Asserting readiness of source 1/////////////////////////
 			if(pipeline_objects[i].src1_RR == -1)
 				pipeline_objects[i].src1_ready = 1;
@@ -433,7 +431,6 @@ void RegRead()
 				{
 					if((ROB[k][1] == pipeline_objects[i].src2_RR)&&(ROB[k][3] == 1)&&(ROB[k][0] == 1))
 					{
-						std::cout<<"\n CASE 1:";
 						pipeline_objects[i].src2_ready = 1;
 						break;
 					}
@@ -444,7 +441,6 @@ void RegRead()
 				if(pipeline_objects[i].src2_RR_ready == 1)
 					pipeline_objects[i].src2_ready = 1;
 				
-				std::cout<<"\n DEST:"<< pipeline_objects[i].dest_RR<<" src2:"<<pipeline_objects[i].src2_RR<<" RDY:"<<pipeline_objects[i].src2_ready;
 			}
 			else
 				pipeline_objects[i].src2_ready = 1;
@@ -464,12 +460,12 @@ void RegRead()
 			pipeline_objects[i].op_type_DI = pipeline_objects[i].op_type_RR;
 			
 			
+			
 		}
 		
 	}
 	else
 	{
-		DI_contains_new_bundle = 0;
 		RR_can_accept_new_bundle = 0;
 		
 		for(int i = 0;i<WIDTH;i++)
@@ -492,9 +488,22 @@ void Dispatch()
 	else if(DI_initial_entry)
 		return;
 		
-	if((DI_contains_new_bundle)&&((IQ_size - IQ_entry_pointer) >= WIDTH))
+	if((IQ_size - IQ_entry_pointer) >= WIDTH)
 	{
 		DI_can_accept_new_bundle = 1;
+		
+		for(int j=0;j<WIDTH;j++)
+		{
+			for(int i=0;i<IQ_size;i++)
+			{
+				if(IQ[i][0] == 1)
+					if(IQ[i][1] == pipeline_objects[j].dest_DI)
+					{
+						std::cout<<"\nCASE 1";
+						return;                                                        //Checking if the rob tag already exists in the issue queue
+					}
+			}
+		}
 		
 		//IQ[entry][0] = Valid instructions
 		//IQ[entry][1] = Dest Tag, regardless of if it exists
@@ -513,7 +522,8 @@ void Dispatch()
 		//IQ[entry][14] = AGE
 		//IQ{entry][15] = op_type
 		//IQ{entry][16] = dest_OG
-	
+		
+		std::cout<<"\nCASE 2"; 
 		for(int i = 0 ;i<WIDTH;i++)
 		{
 			IQ[IQ_entry_pointer][0] = 1;
@@ -553,6 +563,7 @@ void Dispatch()
 	}
 	else
 	{
+		std::cout<<"\n Issue queue full";
 		DI_can_accept_new_bundle = 0;
 		for(int i = 0;i<WIDTH;i++)
 			pipeline_objects[i].no_clk_DI += 1;
@@ -697,9 +708,7 @@ void Execute()
 		//////////////////////////////Find instructions that are ending this cycle/////////////////////////////
 		if((execute_list[i][14]==0)&&(execute_list[i][16]==0) || ((execute_list[i][14]==1)&&(execute_list[i][16]==1)) || ((execute_list[i][14]==2)&&(execute_list[i][16]==4)))
 		{
-			
-			std::cout<<"\nReady insts:"<<execute_list[i][0];
-			
+			std::cout<<"|n READY INST:"<<execute_list[i][0];
 			
 			////////////////////////Wakeup procedures/////////////////////////
 			//////////IN IQ/////////
@@ -717,6 +726,7 @@ void Execute()
 			/////////IN DI Bundle///
 			for(int j=0;j<WIDTH;j++)
 			{
+				std::cout<<"\n DI:"<<pipeline_objects[j].dest_DI<<" j:"<<j;
 				if(pipeline_objects[j].src1_DI == execute_list[i][0])
 				{
 					pipeline_objects[j].src1_ready = 1;
@@ -728,15 +738,14 @@ void Execute()
 			/////////IN RR Bundle///
 			for(int j=0;j<WIDTH;j++)
 			{
-				
+				std::cout<<"\n  RR:"<<pipeline_objects[j].dest_RR<<" j:"<<j;;
 				if(pipeline_objects[j].src1_RR == execute_list[i][0])                  //Becase the renamed values are not yet available so comparing with the og dest
 					pipeline_objects[j].src1_RR_ready = 1;
-				else
-					pipeline_objects[j].src1_RR_ready = 0;                         
+				 
+				
 				if(pipeline_objects[j].src2_RR == execute_list[i][0])
 					pipeline_objects[j].src2_RR_ready = 1;
-				else
-					pipeline_objects[j].src2_RR_ready = 0;
+				
 			}
 			
 			
@@ -800,11 +809,11 @@ void Writeback()
 	std::cout<<"\nWRITEBACK";
 	
 	
-	std::cout<<"\n Printing writeback buffer";
+	/*std::cout<<"\n Printing writeback buffer";
 	for(int i=0;i<writeback_free_entry_pointer;i++)
 	{
 		std::cout<<" tag:"<<WriteBack_buffer[i][0]<<" cycles:"<<WriteBack_buffer[i][16];
-	}
+	}*/
 	
 	for(int i =0;i<writeback_free_entry_pointer;i++)
 	{
@@ -904,7 +913,7 @@ int Advance_Cycle()
 	//////////////////////////////////////////////////////////////
 	
 	
-	if(INST_FETCH_CNT == INST_RETIRE_CNT)
+	/*if(INST_FETCH_CNT == INST_RETIRE_CNT)
 	{
 		std::cout<<"\n inst count:"<<INST_FETCH_CNT<<"  retire count:"<<INST_RETIRE_CNT;
 		std::cout<<"\n ROB_head:"<<ROB_head_pointer<<" ROB_tail:"<<ROB_tail_pointer;
@@ -916,10 +925,11 @@ int Advance_Cycle()
 		std::cout<<"\n ROB_head:"<<ROB_head_pointer<<" ROB_tail:"<<ROB_tail_pointer;
 		return 1;
 	}
+	*/
 	
 	
 	
-	if(temp_control_signal == 100)
+	if(temp_control_signal == 1550)
 		return 0;
 	else
 	{
@@ -928,4 +938,5 @@ int Advance_Cycle()
 		temp_control_signal += 1;
 		return 1;
 	}
+	
 }
