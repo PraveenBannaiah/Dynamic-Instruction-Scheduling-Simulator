@@ -256,6 +256,7 @@ void Rename()
 		return;
 	
 	
+	
 	if(RR_can_accept_new_bundle)
 	{
 			
@@ -371,8 +372,8 @@ void Rename()
 	for(int i = 0;i<ROB_size;i++)
 		if(ROB[i] != 0)                                                        //If equal to zero then it there is not valid entry
 			std::cout<<"\n dest?:"<<ROB[i][0]<<" ROB_tag:"<<ROB[i][1]<<" dest:"<<ROB[i][2]<<" RDY?:"<<ROB[i][3]<<" PC:"<<ROB[i][4];
-	*/		
 			
+	*/		
 	
 	
 }
@@ -496,18 +497,6 @@ void Dispatch()
 	{
 		DI_can_accept_new_bundle = 1;
 		
-		for(int j=0;j<WIDTH;j++)
-		{
-			for(int i=0;i<IQ_size;i++)
-			{
-				if(IQ[i][0] == 1)
-					if(IQ[i][1] == pipeline_objects[j].dest_DI)
-					{
-						return;                                                        //Checking if the rob tag already exists in the issue queue
-					}
-			}
-		}
-		
 		//IQ[entry][0] = Valid instructions
 		//IQ[entry][1] = Dest Tag, regardless of if it exists
 		//IQ[entry][2] = RS1 RDY
@@ -529,11 +518,15 @@ void Dispatch()
 		 
 		for(int i = 0 ;i<WIDTH;i++)
 		{
-			
-			
-			
-			
-			
+			for(int j=0;j<IQ_size;j++)
+			{
+				if(IQ[j][0] == 1)
+					if(IQ[j][1] == pipeline_objects[i].dest_DI)
+					{
+						goto label;                                                        //Checking if the rob tag already exists in the issue queue
+					}
+			}
+		
 			IQ[IQ_entry_pointer][0] = 1;
 			IQ[IQ_entry_pointer][1] = pipeline_objects[i].dest_DI;
 			
@@ -562,7 +555,7 @@ void Dispatch()
 			IQ[IQ_entry_pointer][14] = youngest;
 			IQ[IQ_entry_pointer][15] = pipeline_objects[i].op_type_DI;
 			IQ[IQ_entry_pointer][16] = pipeline_objects[i].dest_RR_OG;
-			IQ[IQ_entry_pointer][8] = 0;
+			IQ[IQ_entry_pointer][8] = 1;
 			
 				
 			////////////////Resetting Timers///////////////////////////////////
@@ -574,6 +567,8 @@ void Dispatch()
 			////////////////Updating the pointers and counters//////////////////////
 			IQ_entry_pointer += 1;
 			youngest += 1;	
+			
+			label: continue;
 		}
 	}
 	else
@@ -585,11 +580,13 @@ void Dispatch()
 	}
 		
 		
-	/*std::cout<<"\nPrinting issue queue";
+	/*
+	std::cout<<"\nPrinting issue queue";
 	for(int i=0;i<IQ_size;i++)
 	{
 		std::cout<<"\n Valid:"<<IQ[i][0]<<" dest:"<<IQ[i][1]<<" src1RDY:"<<IQ[i][2]<<" src1:"<<IQ[i][3]<<" src2RDY:"<<IQ[i][4]<<" src2:"<<IQ[i][5]<< " Cycles:"<<IQ[i][8]<<" age:"<<IQ[i][14];
-	}*/
+	}
+	*/
 
 }
 
@@ -601,14 +598,6 @@ void Issue()
 	
 	int oldest =0;
 	int number_of_issued_inst = 0;
-	
-	////////Updating cyles in issue queue///////
-	for(int i=0;i<IQ_size;i++)
-	{
-		if(IQ[i][0] == 1)
-			IQ[i][8] += 1;
-	}
-	///////////////////////////////////////////
 	
 	
 	for(int i=0;i<IQ_size;i++)
@@ -704,12 +693,22 @@ void Issue()
 		}
 	}
 	
+
+	////////Updating cyles in issue queue///////
+	for(int i=0;i<IQ_size;i++)
+	{
+		if(IQ[i][0] == 1)
+			IQ[i][8] += 1;
+	}
+	///////////////////////////////////////////
 	
-	//std::cout<<"\nPrinting issue queue in ISSUE stage";
-	//for(int i=0;i<IQ_size;i++)
-	//{
-	//	std::cout<<"\n Valid:"<<IQ[i][0]<<" dest:"<<IQ[i][0]<<" src1RDY:"<<IQ[i][2]<<" src1:"<<IQ[i][3]<<" src2RDY:"<<IQ[i][4]<<" src2:"<<IQ[i][5];
-	//}
+	
+	/*std::cout<<"\nPrinting issue queue in ISSUE stage";
+	for(int i=0;i<IQ_size;i++)
+	{
+		std::cout<<"\n Valid:"<<IQ[i][0]<<" dest:"<<IQ[i][0]<<" src1RDY:"<<IQ[i][2]<<" src1:"<<IQ[i][3]<<" src2RDY:"<<IQ[i][4]<<" src2:"<<IQ[i][5]<<" cycles:"<<IQ[i][8]<<" TAG:"<<IQ[i][1];
+	}
+	*/
 }
 
 
@@ -813,7 +812,8 @@ void Execute()
 	for(int i=0;i<execute_list_free_entry_pointer;i++)
 	{
 		std::cout<<"\n tag:"<<execute_list[i][0]<<" cycles:"<<execute_list[i][16];
-	}*/
+	}
+	*/
 	
 }
 
@@ -850,7 +850,7 @@ void Writeback()
 				ROB[j][13] = WriteBack_buffer[i][11];        //CLK_DE
 				ROB[j][14] = WriteBack_buffer[i][12];        //ENTRY FE
 				ROB[j][15] = WriteBack_buffer[i][16];        //CLK_EX
-				ROB[j][16] = 1;
+				ROB[j][16] = 0;
 				
 			}
 		}
@@ -945,7 +945,7 @@ int Advance_Cycle()
 	
 	
 	
-	if(temp_control_signal == 1550)
+	if(temp_control_signal == 200)
 		return 0;
 	else
 	{
