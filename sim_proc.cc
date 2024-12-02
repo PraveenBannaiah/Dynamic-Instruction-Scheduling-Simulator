@@ -236,6 +236,7 @@ void Decode()
 		{
 			pipeline_objects[i].no_clk_decode += 1;
 		}
+		//std::cout<<"\n Stalling in DECODE:"<<pipeline_objects[0].no_clk_decode;
 	}
 	
 }
@@ -555,7 +556,7 @@ void Dispatch()
 			IQ[IQ_entry_pointer][14] = youngest;
 			IQ[IQ_entry_pointer][15] = pipeline_objects[i].op_type_DI;
 			IQ[IQ_entry_pointer][16] = pipeline_objects[i].dest_RR_OG;
-			IQ[IQ_entry_pointer][8] = 1;
+			IQ[IQ_entry_pointer][8] = 0;
 			
 				
 			////////////////Resetting Timers///////////////////////////////////
@@ -598,6 +599,15 @@ void Issue()
 	
 	int oldest =0;
 	int number_of_issued_inst = 0;
+	
+	////////Updating cyles in issue queue///////
+	for(int i=0;i<IQ_size;i++)
+	{
+		if(IQ[i][0] == 1)
+			IQ[i][8] += 1;
+	}
+	///////////////////////////////////////////
+	
 	
 	
 	for(int i=0;i<IQ_size;i++)
@@ -692,15 +702,6 @@ void Issue()
 			}
 		}
 	}
-	
-
-	////////Updating cyles in issue queue///////
-	for(int i=0;i<IQ_size;i++)
-	{
-		if(IQ[i][0] == 1)
-			IQ[i][8] += 1;
-	}
-	///////////////////////////////////////////
 	
 	
 	/*std::cout<<"\nPrinting issue queue in ISSUE stage";
@@ -929,7 +930,7 @@ int Advance_Cycle()
 	//////////////////////////////////////////////////////////////
 	
 	
-	if(INST_FETCH_CNT == INST_RETIRE_CNT)
+	/*if(INST_FETCH_CNT == INST_RETIRE_CNT)
 	{
 		//std::cout<<"\n inst count:"<<INST_FETCH_CNT<<"  retire count:"<<INST_RETIRE_CNT;
 		//std::cout<<"\n ROB_head:"<<ROB_head_pointer<<" ROB_tail:"<<ROB_tail_pointer;
@@ -941,16 +942,16 @@ int Advance_Cycle()
 		//std::cout<<"\n ROB_head:"<<ROB_head_pointer<<" ROB_tail:"<<ROB_tail_pointer;
 		return 1;
 	}
+	*/
 	
 	
 	
-	
-	if(temp_control_signal == 200)
+	if(temp_control_signal == 107)
 		return 0;
 	else
 	{
-		std::cout<<"\n inst count:"<<INST_FETCH_CNT<<"  retire count:"<<INST_RETIRE_CNT;
-		std::cout<<"\n ROB_head:"<<ROB_head_pointer<<" ROB_tail:"<<ROB_tail_pointer;
+		//std::cout<<"\n inst count:"<<INST_FETCH_CNT<<"  retire count:"<<INST_RETIRE_CNT;
+		//std::cout<<"\n ROB_head:"<<ROB_head_pointer<<" ROB_tail:"<<ROB_tail_pointer;
 		temp_control_signal += 1;
 		return 1;
 	}
