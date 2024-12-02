@@ -150,6 +150,12 @@ void Initialisation_function()
 		pipeline_objects[i].no_clk_RN = 1; 
 		pipeline_objects[i].no_clk_RR = 1;
 		pipeline_objects[i].no_clk_DI = 1;
+		pipeline_objects[i].DEFE = 1;
+		pipeline_objects[i].no_clk_DEFE1 = 1;
+		pipeline_objects[i].no_clk_RNDE = 1;
+		pipeline_objects[i].no_clk_RNDE1 = 1;
+		pipeline_objects[i].no_clk_RR2 = 1;
+		pipeline_objects[i].no_clk_DI2 = 1;
 		
 		
 	}
@@ -179,6 +185,9 @@ void Fetch(FILE *FP)
 			
 			pipeline_objects[i].entry_clk_fetch = ticker;
 			
+			pipeline_objects[i].no_clk_DEFE1 = pipeline_objects[i].DEFE;
+			pipeline_objects[i].DEFE = 1;
+			
 			}
 		else                                                              //When we have fetch less than width functions
 			{
@@ -196,6 +205,12 @@ void Fetch(FILE *FP)
 		}
 		
 	}
+	else
+		for(int i=0;i<WIDTH;i++)
+		{
+			pipeline_objects[i].DEFE += 1;
+		}
+		
 
 }
 
@@ -225,6 +240,12 @@ void Decode()
 			pipeline_objects[i].op_type_RN = pipeline_objects[i].op_type_fetch_decode;
 			pipeline_objects[i].PC_RN = pipeline_objects[i].PC_fetch_decode;
 			pipeline_objects[i].entry_clk_FD = pipeline_objects[i].entry_clk_fetch;
+			
+			pipeline_objects[i].no_clk_decode = pipeline_objects[i].no_clk_DEFE1;
+			
+			pipeline_objects[i].no_clk_RNDE = pipeline_objects[i].no_clk_RNDE1;
+			
+			pipeline_objects[i].no_clk_RNDE1 = 1;
 		}
 		
 	}
@@ -234,7 +255,7 @@ void Decode()
 		RN_contains_new_bundle = 0;
 		for(int i=0;i<WIDTH;i++)
 		{
-			pipeline_objects[i].no_clk_decode += 1;
+			pipeline_objects[i].no_clk_RNDE1 += 1;
 		}
 		//std::cout<<"\n Stalling in DECODE:"<<pipeline_objects[0].no_clk_decode;
 	}
@@ -339,8 +360,14 @@ void Rename()
 			/////////////////////Passing other signals to RR///////////////////////////
 				pipeline_objects[i].op_type_RR = pipeline_objects[i].op_type_RN;
 				pipeline_objects[i].PC_RR = pipeline_objects[i].PC_RN;
+				
 				pipeline_objects[i].no_clk_DERN = pipeline_objects[i].no_clk_decode;
 				pipeline_objects[i].entry_clk_FDERN = pipeline_objects[i].entry_clk_FD;
+				pipeline_objects[i].no_clk_RN = pipeline_objects[i].no_clk_RNDE;
+				pipeline_objects[i].no_clk_RR = pipeline_objects[i].no_clk_RR2;
+				
+				
+				
 				pipeline_objects[i].src1_RR_OG = pipeline_objects[i].src1_RN;
 				pipeline_objects[i].src2_RR_OG = pipeline_objects[i].src2_RN;
 				pipeline_objects[i].dest_RR_OG = pipeline_objects[i].dest_RN;
@@ -348,7 +375,7 @@ void Rename()
 				pipeline_objects[i].src2_RR_ready = 0;
 				
 			//////////////////////Resetting Timers///////////////////////////////////
-				pipeline_objects[i].no_clk_decode = 1;
+				pipeline_objects[i].no_clk_RR2 = 1;
 				
 				
 			////////////////////Updating pointers and counters////////////////////////
@@ -366,7 +393,7 @@ void Rename()
 		RN_can_accept_new_bundle = 0;
 
 		for(int i = 0;i<WIDTH;i++)
-			pipeline_objects[i].no_clk_RN += 1;
+			pipeline_objects[i].no_clk_RR2 += 1;
 	}
 	
 	/*std::cout<<"\nPrinting ROB";
@@ -452,9 +479,13 @@ void RegRead()
 			
 		///////////////////////Assiging other signals//////////////////////////////////////////////
 			pipeline_objects[i].PC_DI = pipeline_objects[i].PC_RR;
+			
 			pipeline_objects[i].no_clk_RNRR = pipeline_objects[i].no_clk_RN;
 			pipeline_objects[i].no_clk_DERNRR = pipeline_objects[i].no_clk_DERN;
 			pipeline_objects[i].entry_clk_FDERNRR = pipeline_objects[i].entry_clk_FDERN;
+			pipeline_objects[i].no_clk_DI = pipeline_objects[i].no_clk_DI2;
+			pipeline_objects[i].no_clk_RRDI = pipeline_objects[i].no_clk_RR;
+			
 			pipeline_objects[i].src1_DI_OG = pipeline_objects[i].src1_RR_OG;
 			pipeline_objects[i].src2_DI_OG = pipeline_objects[i].src2_RR_OG;
 			pipeline_objects[i].dest_DI_OG = pipeline_objects[i].dest_RR_OG;
@@ -465,7 +496,7 @@ void RegRead()
 			
 			
 		////////////////Resetting Timiners//////////////////////////////////
-			pipeline_objects[i].no_clk_RN = 1;
+			pipeline_objects[i].no_clk_DI2 = 1;
 			
 		}
 		
@@ -475,7 +506,7 @@ void RegRead()
 		RR_can_accept_new_bundle = 0;
 		
 		for(int i = 0;i<WIDTH;i++)
-			pipeline_objects[i].no_clk_RR += 1;
+			pipeline_objects[i].no_clk_DI2 += 1;
 	}
 	
 }
@@ -549,7 +580,7 @@ void Dispatch()
 			IQ[IQ_entry_pointer][6] = pipeline_objects[i].src1_DI_OG;
 			IQ[IQ_entry_pointer][7] = pipeline_objects[i].src2_DI_OG;
 			IQ[IQ_entry_pointer][9] = pipeline_objects[i].no_clk_DI;
-			IQ[IQ_entry_pointer][10] = pipeline_objects[i].no_clk_RR;
+			IQ[IQ_entry_pointer][10] = pipeline_objects[i].no_clk_RRDI;
 			IQ[IQ_entry_pointer][11] = pipeline_objects[i].no_clk_RNRR;
 			IQ[IQ_entry_pointer][12] = pipeline_objects[i].no_clk_DERNRR;
 			IQ[IQ_entry_pointer][13] = pipeline_objects[i].entry_clk_FDERNRR;
@@ -557,11 +588,6 @@ void Dispatch()
 			IQ[IQ_entry_pointer][15] = pipeline_objects[i].op_type_DI;
 			IQ[IQ_entry_pointer][16] = pipeline_objects[i].dest_RR_OG;
 			IQ[IQ_entry_pointer][8] = 0;
-			
-				
-			////////////////Resetting Timers///////////////////////////////////
-			pipeline_objects[i].no_clk_RR = 1;
-			pipeline_objects[i].no_clk_DI = 1;
 			
 			
 			
@@ -946,7 +972,7 @@ int Advance_Cycle()
 	
 	
 	
-	if(temp_control_signal == 107)
+	if(temp_control_signal == 200)
 		return 0;
 	else
 	{
