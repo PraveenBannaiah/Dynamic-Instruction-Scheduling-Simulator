@@ -239,14 +239,6 @@ void Decode()
 		//std::cout<<"\n Stalling in DECODE:"<<pipeline_objects[0].no_clk_decode;
 	}
 	
-	/*if(ticker == 85)
-	{
-		std::cout<<" RR:"<< RR_can_accept_new_bundle<<" RN:"<<RN_can_accept_new_bundle<<" DE:"<<DE_can_accept_new_bundle;
-		std::cout<<" decode cylest:"<<pipeline_objects[0].no_clk_decode;
-		std::cout<<"\n TESTING";
-	}
-	*/
-	
 }
 
 
@@ -381,8 +373,8 @@ void Rename()
 	for(int i = 0;i<ROB_size;i++)
 		if(ROB[i] != 0)                                                        //If equal to zero then it there is not valid entry
 			std::cout<<"\n dest?:"<<ROB[i][0]<<" ROB_tag:"<<ROB[i][1]<<" dest:"<<ROB[i][2]<<" RDY?:"<<ROB[i][3]<<" PC:"<<ROB[i][4];
-			
 	*/		
+			
 	
 	
 }
@@ -589,13 +581,14 @@ void Dispatch()
 	}
 		
 		
-	/*
-	std::cout<<"\nPrinting issue queue";
+	
+	/*std::cout<<"\nPrinting issue queue";
 	for(int i=0;i<IQ_size;i++)
 	{
 		std::cout<<"\n Valid:"<<IQ[i][0]<<" dest:"<<IQ[i][1]<<" src1RDY:"<<IQ[i][2]<<" src1:"<<IQ[i][3]<<" src2RDY:"<<IQ[i][4]<<" src2:"<<IQ[i][5]<< " Cycles:"<<IQ[i][8]<<" age:"<<IQ[i][14];
 	}
 	*/
+	
 
 }
 
@@ -609,7 +602,7 @@ void Issue()
 	int number_of_issued_inst = 0;
 	
 	////////Updating cyles in issue queue///////
-	for(int i=0;i<IQ_size;i++)
+	for(int i=0;i<IQ_entry_pointer;i++)
 	{
 		if(IQ[i][0] == 1)
 			IQ[i][8] += 1;
@@ -631,8 +624,11 @@ void Issue()
 				if((IQ[j][0] == 1) && (IQ[j][14] == oldest) && (IQ[j][2] == 1) && (IQ[j][4] == 1))
 				{
 					if((number_of_issued_inst == WIDTH)||(execute_list_free_entry_pointer == (WIDTH*5 - 1)))
+					{
+						//std::cout<<"\n Not going into ISSUE update stage";
+						//std::cout<<"\n execute list pointer:"<<execute_list_free_entry_pointer<<" number inst issued:"<<number_of_issued_inst;
 						return;
-					
+					}
 					//IQ[entry][0] = Valid instructions
 					//IQ[entry][1] = Dest Tag, regardless of if it exists
 					//IQ[entry][2] = RS1 RDY
@@ -671,12 +667,12 @@ void Issue()
 					execute_list[execute_list_free_entry_pointer][16] = 0;
 					
 					//////////////Reducing age of instructions older than j//////////////
-					for(int k=(j+1);k<(IQ_size);k++)                                                        
+					for(int k=(j+1);k<(IQ_entry_pointer);k++)                                                        
 						IQ[k][14] = IQ[k][14] - 1;
 				
 				
 					////////////Deleting the Issue Queue row/////////////////////
-					for(int k =j;k<(IQ_size-1);k++)                                                         //Moving up the issue queue
+					for(int k =j;k<(IQ_entry_pointer-1);k++)                                                         //Moving up the issue queue
 					{
 						
 						IQ[k][0] = IQ[k+1][0];
@@ -698,7 +694,7 @@ void Issue()
 						IQ[k][16] = IQ[k+1][16];
 					}
 					
-					IQ[IQ_size-1][0] = 0;                                                                   //Invalidating last entry
+					IQ[IQ_entry_pointer - 1][0] = 0;                                                                   //Invalidating last entry
 					
 					
 					////////////////Updating the pointers and the counters//////////////////////
@@ -706,6 +702,8 @@ void Issue()
 					number_of_issued_inst += 1;
 					IQ_entry_pointer = IQ_entry_pointer -1;
 					youngest -= 1;
+					
+					break;
 				}
 			}
 		}
@@ -718,13 +716,21 @@ void Issue()
 		std::cout<<"\n Valid:"<<IQ[i][0]<<" dest:"<<IQ[i][0]<<" src1RDY:"<<IQ[i][2]<<" src1:"<<IQ[i][3]<<" src2RDY:"<<IQ[i][4]<<" src2:"<<IQ[i][5]<<" cycles:"<<IQ[i][8]<<" TAG:"<<IQ[i][1];
 	}
 	*/
+	
 }
 
 
 
 void Execute()
 {
-	//std::cout<<"\nEXECUTE";
+	/*std::cout<<"\nEXECUTE";
+	
+	std::cout<<"\n Printing execute list";
+	for(int i=0;i<execute_list_free_entry_pointer;i++)
+	{
+		std::cout<<"\n tag:"<<execute_list[i][0]<<" cycles:"<<execute_list[i][16]<<" ISSUE CYCLES:"<<execute_list[i][7];
+	}
+	*/
 
 	for(int i=0;i<execute_list_free_entry_pointer;i++)
 	{
@@ -816,28 +822,21 @@ void Execute()
 		execute_list[i][16] += 1;
 	
 	
-	
-	/*std::cout<<"\n Printing execute list";
-	for(int i=0;i<execute_list_free_entry_pointer;i++)
-	{
-		std::cout<<"\n tag:"<<execute_list[i][0]<<" cycles:"<<execute_list[i][16];
-	}
-	*/
-	
 }
 
 
 
 void Writeback()
 {
-	//std::cout<<"\nWRITEBACK";
+	/*std::cout<<"\nWRITEBACK";
 	
 	
-	/*std::cout<<"\n Printing writeback buffer";
+	std::cout<<"\n Printing writeback buffer";
 	for(int i=0;i<writeback_free_entry_pointer;i++)
 	{
-		std::cout<<" tag:"<<WriteBack_buffer[i][0]<<" cycles:"<<WriteBack_buffer[i][16];
-	}*/
+		std::cout<<"\n tag:"<<WriteBack_buffer[i][0]<<" cycles:"<<WriteBack_buffer[i][16]<<" ISSUE queue cycles:"<<WriteBack_buffer[i][7];
+	}
+	*/
 	
 	for(int i =0;i<writeback_free_entry_pointer;i++)
 	{
@@ -899,11 +898,12 @@ void Retire()
 					RMT_valid_array[ROB[ROB_head_pointer][2]] = 0;
 			}
 			
+			//std::cout<<"\n Retiring inst tag:"<<ROB[ROB_head_pointer][1]<<" ISSUE queue cycles:"<<WriteBack_buffer[i][9];
 			
 			/////////////////Printing outputs/////////////////////////
 			int j = ROB_head_pointer;                                            //Used to mitigate writing long lines of code
 			
-			std::cout<<"\n "<<seq_no<<" fu{"<<ROB[ROB_head_pointer][8]<<"}";
+			std::cout<<" "<<seq_no<<" fu{"<<ROB[ROB_head_pointer][8]<<"}";
 			std::cout<<" src{"<<ROB[ROB_head_pointer][5]<<","<<ROB[ROB_head_pointer][6]<<"} dst{"<<ROB[ROB_head_pointer][2]<<"}";
 			std::cout<<" FE{"<<ROB[ROB_head_pointer][14]<<",1}";
 			std::cout<<" DE{"<<ROB[ROB_head_pointer][14] + 1<<","<<ROB[ROB_head_pointer][13]<<"}";
@@ -913,7 +913,7 @@ void Retire()
 			std::cout<<" IS{"<<ROB[ROB_head_pointer][14] + 1 + ROB[j][13] + ROB[j][12] + ROB[j][11] + ROB[j][10]<<","<<ROB[j][9]<<"}";
 			std::cout<<" EX{"<<ROB[ROB_head_pointer][14] + 1 + ROB[j][13] + ROB[j][12] + ROB[j][11] + ROB[j][10] + ROB[j][9]<<","<< ROB[j][15]<<"}";
 			std::cout<<" WB{"<<ROB[ROB_head_pointer][14] + 1 + ROB[j][13] + ROB[j][12] + ROB[j][11] + ROB[j][10] + ROB[j][9] + ROB[j][15]<<",1}";
-			std::cout<<" RT{"<<ROB[ROB_head_pointer][14] + 1 + ROB[j][13] + ROB[j][12] + ROB[j][11] + ROB[j][10] + ROB[j][9] + ROB[j][15] + 1<<","<<ROB[j][16]<<"}";
+			std::cout<<" RT{"<<ROB[ROB_head_pointer][14] + 1 + ROB[j][13] + ROB[j][12] + ROB[j][11] + ROB[j][10] + ROB[j][9] + ROB[j][15] + 1<<","<<ROB[j][16]<<"} \n";
 			
 			
 			/////////////////Updating variables///////////////////////
@@ -927,6 +927,12 @@ void Retire()
 		}
 	}
 	
+	/*std::cout<<"\nPrinting ROB in retire stage";
+	for(int i = 0;i<ROB_size;i++)
+		if(ROB[i] != 0)                                                        //If equal to zero then it there is not valid entry
+			std::cout<<"\n dest?:"<<ROB[i][0]<<" ROB_tag:"<<ROB[i][1]<<" dest:"<<ROB[i][2]<<" RDY?:"<<ROB[i][3]<<" PC:"<<ROB[i][4];
+			*/
+	
 	
 }
 
@@ -937,11 +943,8 @@ int Advance_Cycle()
 	ticker = ticker + 1;          //Updating the global clock
 	//////////////////////////////////////////////////////////////
 	
-	if(ticker == 10500)
-		return 0;
 	
-	
-	if(INST_FETCH_CNT == INST_RETIRE_CNT)
+	/*if(INST_FETCH_CNT == INST_RETIRE_CNT)
 	{
 		//std::cout<<"\n inst count:"<<INST_FETCH_CNT<<"  retire count:"<<INST_RETIRE_CNT;
 		//std::cout<<"\n ROB_head:"<<ROB_head_pointer<<" ROB_tail:"<<ROB_tail_pointer;
@@ -953,11 +956,11 @@ int Advance_Cycle()
 		//std::cout<<"\n ROB_head:"<<ROB_head_pointer<<" ROB_tail:"<<ROB_tail_pointer;
 		return 1;
 	}
+	*/
+
+	//std::cout<<"\n TICKER TICKER TICKER:"<<ticker;
 	
-	
-	
-	
-	if(temp_control_signal == 166)
+	if(temp_control_signal ==109)
 		return 0;
 	else
 	{
