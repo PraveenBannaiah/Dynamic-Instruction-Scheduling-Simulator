@@ -138,6 +138,19 @@ int main (int argc, char* argv[])
 	}while(Advance_Cycle());
 	
 	//////////////////////////////////////////////////////////////////////////////////
+	std::cout<<"# === Simulator Command =========";
+	std::cout<<"\n# ./sim "<< params.rob_size <<" "<< params.iq_size<<" "<<params.width<<" "<< trace_file;
+	std::cout<<"\n# === Processor Configuration ===";
+	std::cout<<"\n# ROB_SIZE = "<<params.rob_size;
+	std::cout<<"\n# IQ_SIZE  = "<<params.iq_size;
+	std::cout<<"\n# WIDTH    = "<<params.width;
+	std::cout<<"\n# === Simulation Results ========";
+	std::cout<<"\n# Dynamic Instruction Count    = "<<seq_no;
+	std::cout<<"\n# Cycles                       = "<<ticker;
+	std::cout<<"\n# Instructions Per Cycle (IPC) = "<<(seq_no/ticker);
+	
+	
+	
     return 0;
 }
 
@@ -174,7 +187,7 @@ void Fetch(FILE *FP)
 		if(fscanf(FP, "%lx %d %d %d %d", &pc, &op_type, &dest, &src1, &src2) != EOF)
 			{
 			INST_FETCH_CNT += 1;
-			printf("\n %lx %d %d %d %d\n", pc, op_type, dest, src1, src2);
+			//printf("\n %lx %d %d %d %d\n", pc, op_type, dest, src1, src2);
 			pipeline_objects[i].src1_fetch_decode = src1;
 			pipeline_objects[i].src2_fetch_decode = src2;
 			pipeline_objects[i].dest_fetch_decode = dest;
@@ -242,7 +255,7 @@ void Decode()
 		for(int i=0;i<WIDTH;i++)
 		{
 			pipeline_objects[i].decode_cyles += 1;
-			std::cout<<"\n Instruction stalling in decode:"<<pipeline_objects[i].dest_fetch_decode<<" for:"<<pipeline_objects[i].no_clk_decode;
+			//std::cout<<"\n Instruction stalling in decode:"<<pipeline_objects[i].dest_fetch_decode<<" for:"<<pipeline_objects[i].no_clk_decode;
 		}
 		//std::cout<<"\n Stalling in DECODE:"<<pipeline_objects[0].no_clk_decode;
 	}
@@ -253,7 +266,7 @@ void Decode()
 void Rename()
 {
 	
-	std::cout<<"\nRENAME";
+	//std::cout<<"\nRENAME";
 	
 	if((RN_initial_entry)&&(DE_initial_entry == 0))                                             //TO make sure the data flows for the first time
 		{
@@ -273,12 +286,12 @@ void Rename()
 		{
 			RN_can_accept_new_bundle = 0;
 			
-			std::cout<<"\n Number of free rob entries:"<<NO_ROB_free_entries;
+			//std::cout<<"\n Number of free rob entries:"<<NO_ROB_free_entries;
 			//std::cout<<" RR_can_accept_new_bundle:"<<RR_can_accept_new_bundle;
 			for(int i = 0;i<WIDTH;i++)
 			{
 				pipeline_objects[i].rename_cyles += 1;
-				std::cout<<"\n Instruction stalling in rename:"<<pipeline_objects[i].dest_RN<<" for:"<<pipeline_objects[i].no_clk_RN;
+				//std::cout<<"\n Instruction stalling in rename:"<<pipeline_objects[i].dest_RN<<" for:"<<pipeline_objects[i].no_clk_RN;
 			}
 			
 			
@@ -383,11 +396,11 @@ void Rename()
 			pipeline_objects[i].rename_cyles += 1;
 	}
 	
-	std::cout<<"\nPrinting ROB";
+	/*std::cout<<"\nPrinting ROB";
 	for(int i = 0;i<ROB_size;i++)
 		if(ROB[i] != 0)                                                        //If equal to zero then it there is not valid entry
 			std::cout<<"\n dest?:"<<ROB[i][0]<<" ROB_tag:"<<ROB[i][1]<<" dest:"<<ROB[i][2]<<" RDY?:"<<ROB[i][3]<<" PC:"<<ROB[i][4];
-			
+	*/	
 			
 	
 	
@@ -398,7 +411,7 @@ void Rename()
 
 void RegRead()
 {
-	std::cout<<"\nREGREAD";
+	//std::cout<<"\nREGREAD";
 	
 	if((RR_initial_entry)&&(RN_initial_entry == 0))                                             //TO make sure the data flows for the first time
 	{
@@ -500,7 +513,7 @@ void RegRead()
 
 void Dispatch()
 {
-	std::cout<<"\nDISPATCH";
+	//std::cout<<"\nDISPATCH";
 	
 	if((DI_initial_entry)&&(RR_initial_entry == 0))                                             //TO make sure the data flows for the first time
 	{
@@ -595,19 +608,21 @@ void Dispatch()
 	}
 	else
 	{
-		std::cout<<"\n Issue queue full";
+		//std::cout<<"\n Issue queue full";
 		DI_can_accept_new_bundle = 0;
 		for(int i = 0;i<WIDTH;i++)
 			pipeline_objects[i].no_clk_DI += 1;
 	}
 		
 		
-	
+	/*
 	std::cout<<"\nPrinting issue queue";
 	for(int i=0;i<IQ_size;i++)
 	{
 		std::cout<<"\n Valid:"<<IQ[i][0]<<" dest:"<<IQ[i][1]<<" src1RDY:"<<IQ[i][2]<<" src1:"<<IQ[i][3]<<" src2RDY:"<<IQ[i][4]<<" src2:"<<IQ[i][5]<< " Cycles:"<<IQ[i][8]<<" age:"<<IQ[i][14];
 	}
+	*/
+	
 	
 	
 
@@ -616,7 +631,7 @@ void Dispatch()
 
 void Issue()
 {
-	std::cout<<"\nISSUE";
+	//std::cout<<"\nISSUE";
 	
 	
 	int oldest =0;
@@ -630,17 +645,19 @@ void Issue()
 	}
 	///////////////////////////////////////////
 	
-	std::cout<<"\nPrinting issue queue in ISSUE stage";
+	/*std::cout<<"\nPrinting issue queue in ISSUE stage";
 	for(int i=0;i<IQ_size;i++)
 	{
 		std::cout<<"\n Valid:"<<IQ[i][0]<<" dest:"<<IQ[i][0]<<" src1RDY:"<<IQ[i][2]<<" src1:"<<IQ[i][3]<<" src2RDY:"<<IQ[i][4]<<" src2:"<<IQ[i][5]<<" cycles:"<<IQ[i][8]<<" TAG:"<<IQ[i][1];
 	}
+	*/
+	
 	
 	
 	
 	for(int i=0;i<IQ_size;i++)
 	{
-		if((number_of_issued_inst == WIDTH)||(execute_list_free_entry_pointer == (WIDTH*5 - 1)))
+		if((number_of_issued_inst == WIDTH)||(execute_list_free_entry_pointer == (WIDTH*5)))
 			break;
 		else
 		{
@@ -650,10 +667,10 @@ void Issue()
 				
 				if((IQ[j][0] == 1) && (IQ[j][14] == oldest) && (IQ[j][2] == 1) && (IQ[j][4] == 1))
 				{
-					if((number_of_issued_inst == WIDTH)||(execute_list_free_entry_pointer == (WIDTH*5 - 1)))
+					if((number_of_issued_inst == WIDTH)||(execute_list_free_entry_pointer == (WIDTH*5)))
 					{
-						std::cout<<"\n Not going into ISSUE update stage";
-						std::cout<<"\n execute list pointer:"<<execute_list_free_entry_pointer<<" number inst issued:"<<number_of_issued_inst;
+						//std::cout<<"\n Not going into ISSUE update stage";
+						//std::cout<<"\n execute list pointer:"<<execute_list_free_entry_pointer<<" number inst issued:"<<number_of_issued_inst;
 						return;
 					}
 					//IQ[entry][0] = Valid instructions
@@ -736,11 +753,14 @@ void Issue()
 		}
 	}
 	
+	/*
 	std::cout<<"\nPrinting issue queue after ISSUE stage";
 	for(int i=0;i<IQ_size;i++)
 	{
 		std::cout<<"\n Valid:"<<IQ[i][0]<<" dest:"<<IQ[i][0]<<" src1RDY:"<<IQ[i][2]<<" src1:"<<IQ[i][3]<<" src2RDY:"<<IQ[i][4]<<" src2:"<<IQ[i][5]<<" cycles:"<<IQ[i][8]<<" TAG:"<<IQ[i][1];
 	}
+	*/
+	
 	
 	
 }
@@ -749,13 +769,15 @@ void Issue()
 
 void Execute()
 {
-	std::cout<<"\nEXECUTE";
+	/*std::cout<<"\nEXECUTE";
 	
 	std::cout<<"\n Printing execute list";
 	for(int i=0;i<execute_list_free_entry_pointer;i++)
 	{
 		std::cout<<"\n tag:"<<execute_list[i][0]<<" cycles:"<<execute_list[i][16]<<" ISSUE CYCLES:"<<execute_list[i][7];
 	}
+	*/
+	
 	
 
 	for(int i=0;i<execute_list_free_entry_pointer;i++)
@@ -763,7 +785,7 @@ void Execute()
 		//////////////////////////////Find instructions that are ending this cycle/////////////////////////////
 		if((execute_list[i][14]==0)&&(execute_list[i][16]==0) || ((execute_list[i][14]==1)&&(execute_list[i][16]==1)) || ((execute_list[i][14]==2)&&(execute_list[i][16]==4)))
 		{
-			std::cout<<"|n READY INST:"<<execute_list[i][0];
+			//std::cout<<"|n READY INST:"<<execute_list[i][0];
 			
 			////////////////////////Wakeup procedures/////////////////////////
 			//////////IN IQ/////////
@@ -854,7 +876,7 @@ void Execute()
 
 void Writeback()
 {
-	std::cout<<"\nWRITEBACK";
+	/*std::cout<<"\nWRITEBACK";
 	
 	
 	std::cout<<"\n Printing writeback buffer";
@@ -862,6 +884,8 @@ void Writeback()
 	{
 		std::cout<<"\n tag:"<<WriteBack_buffer[i][0]<<" cycles:"<<WriteBack_buffer[i][16]<<" ISSUE queue cycles:"<<WriteBack_buffer[i][7];
 	}
+	*/
+	
 	
 	
 	for(int i =0;i<writeback_free_entry_pointer;i++)
@@ -924,7 +948,7 @@ void Retire()
 					RMT_valid_array[ROB[ROB_head_pointer][2]] = 0;
 			}
 			
-			std::cout<<"\n Retiring inst tag:"<<ROB[ROB_head_pointer][1]<<" ISSUE queue cycles:"<<WriteBack_buffer[i][9];
+			//std::cout<<"\n Retiring inst tag:"<<ROB[ROB_head_pointer][1]<<" ISSUE queue cycles:"<<WriteBack_buffer[i][9];
 			
 			/////////////////Printing outputs/////////////////////////
 			int j = ROB_head_pointer;                                            //Used to mitigate writing long lines of code
@@ -953,12 +977,12 @@ void Retire()
 		}
 	}
 	
-	std::cout<<"\nPrinting ROB in retire stage";
+	/*std::cout<<"\nPrinting ROB in retire stage";
 	for(int i = 0;i<ROB_size;i++)
 		if(ROB[i] != 0)                                                        //If equal to zero then it there is not valid entry
 			std::cout<<"\n dest?:"<<ROB[i][0]<<" ROB_tag:"<<ROB[i][1]<<" dest:"<<ROB[i][2]<<" RDY?:"<<ROB[i][3]<<" PC:"<<ROB[i][4]<<" ISSUE CYCLES:"<<ROB[i][9];
 			
-	
+	*/
 	
 }
 
@@ -970,7 +994,7 @@ int Advance_Cycle()
 	//////////////////////////////////////////////////////////////
 	
 	
-	/*if(INST_FETCH_CNT == INST_RETIRE_CNT)
+	if((INST_FETCH_CNT == INST_RETIRE_CNT)||(INST_RETIRE_CNT == 10000))
 	{
 		//std::cout<<"\n inst count:"<<INST_FETCH_CNT<<"  retire count:"<<INST_RETIRE_CNT;
 		//std::cout<<"\n ROB_head:"<<ROB_head_pointer<<" ROB_tail:"<<ROB_tail_pointer;
@@ -982,18 +1006,20 @@ int Advance_Cycle()
 		//std::cout<<"\n ROB_head:"<<ROB_head_pointer<<" ROB_tail:"<<ROB_tail_pointer;
 		return 1;
 	}
-	*/
-
-	std::cout<<"\n TICKER TICKER TICKER:"<<ticker;
 	
-	if(temp_control_signal ==25)
+	
+
+	//std::cout<<"\n TICKER TICKER TICKER:"<<ticker;
+	
+	if(temp_control_signal ==166)
 		return 0;
 	else
 	{
-		std::cout<<"\n inst count:"<<INST_FETCH_CNT<<"  retire count:"<<INST_RETIRE_CNT;
-		std::cout<<"\n ROB_head:"<<ROB_head_pointer<<" ROB_tail:"<<ROB_tail_pointer;
+		//std::cout<<"\n inst count:"<<INST_FETCH_CNT<<"  retire count:"<<INST_RETIRE_CNT;
+		//std::cout<<"\n ROB_head:"<<ROB_head_pointer<<" ROB_tail:"<<ROB_tail_pointer;
 		temp_control_signal += 1;
 		return 1;
 	}
+	
 	
 }
