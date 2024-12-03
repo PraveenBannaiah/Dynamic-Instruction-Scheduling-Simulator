@@ -129,6 +129,11 @@ int writeback_free_entry_pointer;
 /////////////Wakeup signals////////////////////////
 int *Wakeup = nullptr;
 int wakeup_pointer;
+
+
+////////////Buffer to keep track of recently issued instructions///////////////
+int recently_issued[500];
+int recently_issued_free_entry = 0;
 	
 
 //////////////////////////////Function Initialisations///////////////////////////////////////

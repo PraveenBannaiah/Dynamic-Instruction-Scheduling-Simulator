@@ -536,13 +536,10 @@ void Dispatch()
 		 
 		for(int i = 0 ;i<WIDTH;i++)
 		{
-			for(int j=0;j<IQ_size;j++)
+			for(int j=0;j<450;j++)
 			{
-				if(IQ[j][0] == 1)
-					if(IQ[j][1] == pipeline_objects[i].dest_DI)
-					{
-						goto label;                                                        //Checking if the rob tag already exists in the issue queue
-					}
+				if(recently_issued[j] == pipeline_objects[i].dest_DI)
+					goto label;
 			}
 		
 			IQ[IQ_entry_pointer][0] = 1;
@@ -576,6 +573,12 @@ void Dispatch()
 			IQ[IQ_entry_pointer][15] = pipeline_objects[i].op_type_DI;
 			IQ[IQ_entry_pointer][16] = pipeline_objects[i].dest_RR_OG;
 			IQ[IQ_entry_pointer][8] = 0;
+			
+			
+			
+			///////////////Putting data into the recently issued buffer////////////////////
+			recently_issued[recently_issued_free_entry] = pipeline_objects[i].dest_DI;
+			recently_issued_free_entry = (recently_issued_free_entry + 1)%450;
 			
 				
 			////////////////Resetting Timers///////////////////////////////////
@@ -626,6 +629,12 @@ void Issue()
 			IQ[i][8] += 1;
 	}
 	///////////////////////////////////////////
+	
+	std::cout<<"\nPrinting issue queue in ISSUE stage";
+	for(int i=0;i<IQ_size;i++)
+	{
+		std::cout<<"\n Valid:"<<IQ[i][0]<<" dest:"<<IQ[i][0]<<" src1RDY:"<<IQ[i][2]<<" src1:"<<IQ[i][3]<<" src2RDY:"<<IQ[i][4]<<" src2:"<<IQ[i][5]<<" cycles:"<<IQ[i][8]<<" TAG:"<<IQ[i][1];
+	}
 	
 	
 	
@@ -727,8 +736,7 @@ void Issue()
 		}
 	}
 	
-	
-	std::cout<<"\nPrinting issue queue in ISSUE stage";
+	std::cout<<"\nPrinting issue queue after ISSUE stage";
 	for(int i=0;i<IQ_size;i++)
 	{
 		std::cout<<"\n Valid:"<<IQ[i][0]<<" dest:"<<IQ[i][0]<<" src1RDY:"<<IQ[i][2]<<" src1:"<<IQ[i][3]<<" src2RDY:"<<IQ[i][4]<<" src2:"<<IQ[i][5]<<" cycles:"<<IQ[i][8]<<" TAG:"<<IQ[i][1];
@@ -948,7 +956,7 @@ void Retire()
 	std::cout<<"\nPrinting ROB in retire stage";
 	for(int i = 0;i<ROB_size;i++)
 		if(ROB[i] != 0)                                                        //If equal to zero then it there is not valid entry
-			std::cout<<"\n dest?:"<<ROB[i][0]<<" ROB_tag:"<<ROB[i][1]<<" dest:"<<ROB[i][2]<<" RDY?:"<<ROB[i][3]<<" PC:"<<ROB[i][4];
+			std::cout<<"\n dest?:"<<ROB[i][0]<<" ROB_tag:"<<ROB[i][1]<<" dest:"<<ROB[i][2]<<" RDY?:"<<ROB[i][3]<<" PC:"<<ROB[i][4]<<" ISSUE CYCLES:"<<ROB[i][9];
 			
 	
 	
