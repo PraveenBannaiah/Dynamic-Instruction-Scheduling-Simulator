@@ -42,39 +42,38 @@ unsigned int ticker = 0;
 typedef struct Pipeline{
 	
 	
-	long int DEFE,no_clk_DEFE1;
 	//DE
 	int src1_fetch_decode, src2_fetch_decode,dest_fetch_decode,op_type_fetch_decode, valid;     //valid is used for the case when we have fetch less than width inst
 	long long int PC_fetch_decode;
-	long int entry_clk_fetch;                                                                          
-	long int no_clk_decode;
-	long long int no_clk_RNDE;
+	long int entry_clk_fetch;  
+	int decode_cyles;
 	
 	//RN
 	int src1_RN,src2_RN,dest_RN,op_type_RN;
 	long long int PC_RN;
-	long int entry_clk_FD;
-	long int no_clk_RN;
-	long long int no_clk_RNDE1;
+	long int no_clk_decode, entry_clk_FD;
+	int rename_cyles;
 	
 	//RR
 	int src1_RR,src2_RR,dest_RR,op_type_RR;   //rr and rob both should have space for new bundle
 	int src1_RR_OG,src2_RR_OG,dest_RR_OG;                //Original destination is present in the ROB
 	long long int PC_RR;
 	int src1_RR_ready, src2_RR_ready;
-    long int no_clk_RR,no_clk_RNRR,no_clk_DERN,entry_clk_FDERN,no_clk_RR2;
+    long int no_clk_RN, no_clk_DERN,entry_clk_FDERN;
+	int RR_cyles;
 	
 	
 	//DI
 	int src1_DI,src2_DI,dest_DI,op_type_DI;
 	int src1_DI_OG,src2_DI_OG,dest_DI_OG;
-	long int no_clk_RRDI, no_clk_RNRRDI,no_clk_DERNRR,entry_clk_FDERNRR;
+	long int no_clk_RR, no_clk_RNRR,no_clk_DERNRR,entry_clk_FDERNRR;
 	long long int PC_DI;
 	int src1_ready, src2_ready, dest_ready;
+	int DI_cyles;
 	//unsigned int no_clk_dispatch, no_clk_rrd, no_clk_rerd,no_clk_drerd,entry_clk_fdrerd;
 
 
-	long int no_clk_DI,no_clk_DI2;
+	long int no_clk_DI;
 	
 	/*int src1_exe1,src2_exe1,dest_exe1,op_type_exe1,no_cyles_in_ex_exe1,completed_exe1;   //We have five because a total of five instructions can be in flight in a given execute stage
 	int src1_exe2,src2_exe2,dest_exe2,op_type_exe2,no_cyles_in_ex_exe2,completed_exe2;
