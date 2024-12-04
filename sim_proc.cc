@@ -362,7 +362,7 @@ void Rename()
 				}
 				else
 				{
-					RMT_tag[pipeline_objects[i].dest_RN] = pipeline_objects[i].dest_RN;
+					//RMT_tag[pipeline_objects[i].dest_RN] = pipeline_objects[i].dest_RN;
 					RMT_valid_array[pipeline_objects[i].dest_RN] = 0;
 				}
 				
