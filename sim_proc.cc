@@ -440,6 +440,7 @@ void RegRead()
 	if((RR_is_actually_free)&&(DI_moved_along))
 	{
 		DI_is_actually_free = 1;
+		//std::cout<<"\n Case 2";
 		return;
 	}
 	else
@@ -450,6 +451,7 @@ void RegRead()
 	{	
 		RR_can_accept_new_bundle = 1;
 		DI_moved_along = 0;
+		//std::cout<<"\n REGREAD WENT IN1";
 		
 		
 		
@@ -529,6 +531,13 @@ void RegRead()
 	else
 	{
 		RR_can_accept_new_bundle = 0;
+		
+		if(RR_is_actually_free)
+		{
+			//std::cout<<"\n Case ! REGREAD";
+			return;
+		}
+		
 		
 		for(int i = 0;i<WIDTH;i++)
 		{
@@ -622,7 +631,8 @@ void Dispatch()
 			IQ[IQ_entry_pointer][16] = pipeline_objects[i].dest_RR_OG;
 			IQ[IQ_entry_pointer][8] = 0;
 			
-			//std::cout<<"\n Instruction going into inssue quuqu:"<<pipeline_objects[i].dest_DI<<" with DI cycles for:"<<pipeline_objects[i].no_clk_DI;
+			//std::cout<<"\n Instruction going into inssue quuqu:"<<pipeline_objects[i].dest_DI<<" with DI cycles for:"<<pipeline_objects[i].no_clk_DI<< "RR Cycles:"<<pipeline_objects[i].no_clk_RR;
+			
 			
 			
 			///////////////Putting data into the recently issued buffer////////////////////
@@ -649,8 +659,10 @@ void Dispatch()
 		DI_can_accept_new_bundle = 0;
 		
 		if(DI_is_actually_free == 1)
+		{
+			DI_can_accept_new_bundle = 1;
 			return;
-		
+		}
 		
 		for(int i = 0;i<WIDTH;i++)
 		{
@@ -1067,10 +1079,10 @@ int Advance_Cycle()
 	
 	
 	
-/*
+	/*
 	std::cout<<"\n TICKER TICKER TICKER:"<<ticker;
 	
-	if(temp_control_signal ==1079)
+	if(temp_control_signal ==2465)
 		return 0;
 	else
 	{
@@ -1079,7 +1091,8 @@ int Advance_Cycle()
 		temp_control_signal += 1;
 		return 1;
 	}
-*/
+	*/
+
 	
 	
 	
