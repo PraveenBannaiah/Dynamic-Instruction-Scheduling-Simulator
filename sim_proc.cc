@@ -183,7 +183,7 @@ void Fetch(FILE *FP)
 	int op_type, dest, src1,src2;
 	long long int pc;
 	
-	//std::cout<<"\nFETCH";
+//std::cout<<"\nFETCH";
 	
 	if((DE_can_accept_new_bundle)&&(EOF_reached == 0))
 	{
@@ -297,7 +297,7 @@ void Rename()
 			for(int i = 0;i<WIDTH;i++)
 			{
 				pipeline_objects[i].rename_cyles += 1;
-				//std::cout<<"\n Instruction stalling in rename:"<<pipeline_objects[i].dest_RN<<" for:"<<pipeline_objects[i].rename_cyles;
+			//	std::cout<<"\n Instruction stalling in rename:"<<pipeline_objects[i].dest_RN<<" for:"<<pipeline_objects[i].rename_cyles;
 				pipeline_objects[i].RR_cyles = 1;
 			}
 			
@@ -437,7 +437,22 @@ void RegRead()
 		return;
 	
 	
-	if(DI_can_accept_new_bundle)
+	if(RR_is_actually_free)
+	{
+		DI_is_actually_free = 1;
+		return;
+	}
+	else
+		DI_is_actually_free = 0;
+	
+	
+	if(DI_is_actually_free)
+	{
+		for(int i=0;i<WIDTH;i++)
+			pipeline_objects[i].DI_cyles == 1;
+	}
+	
+	if((DI_can_accept_new_bundle)||(DI_is_actually_free))
 	{	
 		RR_can_accept_new_bundle = 1;
 		
@@ -519,7 +534,11 @@ void RegRead()
 		RR_can_accept_new_bundle = 0;
 		
 		for(int i = 0;i<WIDTH;i++)
+		{
 			pipeline_objects[i].RR_cyles += 1;
+			//std::cout<<"\n Instruction stalling in RR:"<<pipeline_objects[i].dest_RR<<" for:"<<pipeline_objects[i].RR_cyles;
+		}
+		
 	}
 	
 }
@@ -537,6 +556,8 @@ void Dispatch()
 	}
 	else if(DI_initial_entry)
 		return;
+	
+	
 		
 	if((IQ_size - IQ_entry_pointer) >= WIDTH)
 	{
@@ -626,7 +647,10 @@ void Dispatch()
 		//std::cout<<"\n IQ_size - IQ_entry_pointer:"<<IQ_size - IQ_entry_pointer;
 		DI_can_accept_new_bundle = 0;
 		for(int i = 0;i<WIDTH;i++)
+		{
 			pipeline_objects[i].no_clk_DI += 1;
+			//std::cout<<"\n Instruction stalling in DI:"<<pipeline_objects[i].dest_RR<<" for:"<<pipeline_objects[i].RR_cyles;
+		}
 	}
 		
 		
@@ -636,8 +660,8 @@ void Dispatch()
 	{
 		std::cout<<"\n Valid:"<<IQ[i][0]<<" dest:"<<IQ[i][1]<<" src1RDY:"<<IQ[i][2]<<" src1:"<<IQ[i][3]<<" src2RDY:"<<IQ[i][4]<<" src2:"<<IQ[i][5]<< " Cycles:"<<IQ[i][8]<<" age:"<<IQ[i][14];
 	}
-	
 	*/
+	
 	
 	
 
@@ -797,6 +821,7 @@ void Execute()
 	
 	
 	
+	
 
 	for(int i=0;i<execute_list_free_entry_pointer;i++)
 	{
@@ -894,7 +919,8 @@ void Execute()
 
 void Writeback()
 {
-	/*std::cout<<"\nWRITEBACK";
+	/*
+	std::cout<<"\nWRITEBACK";
 	
 	
 	std::cout<<"\n Printing writeback buffer";
@@ -902,8 +928,8 @@ void Writeback()
 	{
 		std::cout<<"\n tag:"<<WriteBack_buffer[i][0]<<" cycles:"<<WriteBack_buffer[i][16]<<" ISSUE queue cycles:"<<WriteBack_buffer[i][7];
 	}
-	
 	*/
+	
 	
 	
 	for(int i =0;i<writeback_free_entry_pointer;i++)
@@ -999,7 +1025,8 @@ void Retire()
 		}
 	}
 	
-	/*std::cout<<"\nPrinting ROB in retire stage";
+	/*
+	std::cout<<"\nPrinting ROB in retire stage";
 	for(int i = 0;i<ROB_size;i++)
 		if(ROB[i] != 0)                                                        //If equal to zero then it there is not valid entry
 			std::cout<<"\n dest?:"<<ROB[i][0]<<" ROB_tag:"<<ROB[i][1]<<" dest:"<<ROB[i][2]<<" RDY?:"<<ROB[i][3]<<" PC:"<<ROB[i][4]<<" ISSUE CYCLES:"<<ROB[i][9];
@@ -1034,7 +1061,7 @@ int Advance_Cycle()
 	
 	
 
-	//std::cout<<"\n TICKER TICKER TICKER:"<<ticker;
+	/*std::cout<<"\n TICKER TICKER TICKER:"<<ticker;
 	
 	if(temp_control_signal ==1079)
 		return 0;
@@ -1045,6 +1072,7 @@ int Advance_Cycle()
 		temp_control_signal += 1;
 		return 1;
 	}
+	*/
 	
 	
 }
