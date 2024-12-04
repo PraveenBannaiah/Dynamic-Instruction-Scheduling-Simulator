@@ -23,6 +23,7 @@ int NO_ROB_free_entries;
 int RR_can_accept_new_bundle = 1;
 int RR_contains_new_bundle = 0;
 int RR_initial_entry = 1;
+int RR_is_actually_free = 0;
 
 
 int DI_can_accept_new_bundle = 1;
