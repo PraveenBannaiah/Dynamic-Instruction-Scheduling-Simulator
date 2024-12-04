@@ -183,7 +183,7 @@ void Fetch(FILE *FP)
 	int op_type, dest, src1,src2;
 	long long int pc;
 	
-//std::cout<<"\nFETCH";
+	//std::cout<<"\nFETCH";
 	
 	if((DE_can_accept_new_bundle)&&(EOF_reached == 0))
 	{
@@ -297,7 +297,7 @@ void Rename()
 			for(int i = 0;i<WIDTH;i++)
 			{
 				pipeline_objects[i].rename_cyles += 1;
-			//	std::cout<<"\n Instruction stalling in rename:"<<pipeline_objects[i].dest_RN<<" for:"<<pipeline_objects[i].rename_cyles;
+				//std::cout<<"\n Instruction stalling in rename:"<<pipeline_objects[i].dest_RN<<" for:"<<pipeline_objects[i].rename_cyles;
 				pipeline_objects[i].RR_cyles = 1;
 			}
 			
@@ -445,12 +445,6 @@ void RegRead()
 	else
 		DI_is_actually_free = 0;
 	
-	
-	if(DI_is_actually_free)
-	{
-		for(int i=0;i<WIDTH;i++)
-			pipeline_objects[i].DI_cyles == 1;
-	}
 	
 	if((DI_can_accept_new_bundle)||(DI_is_actually_free))
 	{	
@@ -622,6 +616,7 @@ void Dispatch()
 			IQ[IQ_entry_pointer][16] = pipeline_objects[i].dest_RR_OG;
 			IQ[IQ_entry_pointer][8] = 0;
 			
+			//std::cout<<"\n Instruction going into inssue quuqu:"<<pipeline_objects[i].dest_DI<<" with DI cycles for:"<<pipeline_objects[i].no_clk_DI;
 			
 			
 			///////////////Putting data into the recently issued buffer////////////////////
@@ -646,10 +641,15 @@ void Dispatch()
 		//std::cout<<"\n Issue queue full";
 		//std::cout<<"\n IQ_size - IQ_entry_pointer:"<<IQ_size - IQ_entry_pointer;
 		DI_can_accept_new_bundle = 0;
+		
+		if(DI_is_actually_free == 1)
+			return;
+		
+		
 		for(int i = 0;i<WIDTH;i++)
 		{
 			pipeline_objects[i].no_clk_DI += 1;
-			//std::cout<<"\n Instruction stalling in DI:"<<pipeline_objects[i].dest_RR<<" for:"<<pipeline_objects[i].RR_cyles;
+			//std::cout<<"\n Instruction stalling in DI:"<<pipeline_objects[i].dest_DI<<" for:"<<pipeline_objects[i].no_clk_DI;
 		}
 	}
 		
@@ -683,6 +683,7 @@ void Issue()
 			IQ[i][8] += 1;
 	}
 	///////////////////////////////////////////
+	
 	/*
 	std::cout<<"\nPrinting issue queue in ISSUE stage";
 	for(int i=0;i<IQ_size;i++)
@@ -1060,19 +1061,20 @@ int Advance_Cycle()
 	
 	
 	
-
-	/*std::cout<<"\n TICKER TICKER TICKER:"<<ticker;
+/*
+	std::cout<<"\n TICKER TICKER TICKER:"<<ticker;
 	
 	if(temp_control_signal ==1079)
 		return 0;
 	else
 	{
 		//std::cout<<"\n inst count:"<<INST_FETCH_CNT<<"  retire count:"<<INST_RETIRE_CNT;
-		//std::cout<<"\n ROB_head:"<<ROB_head_pointer<<" ROB_tail:"<<ROB_tail_pointer;
+		std::cout<<"\n ROB_head:"<<ROB_head_pointer<<" ROB_tail:"<<ROB_tail_pointer;
 		temp_control_signal += 1;
 		return 1;
 	}
-	*/
+*/
+	
 	
 	
 }
