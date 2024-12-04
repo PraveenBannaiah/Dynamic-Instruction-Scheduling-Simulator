@@ -437,7 +437,7 @@ void RegRead()
 		return;
 	
 	
-	if(RR_is_actually_free)
+	if((RR_is_actually_free)&&(DI_moved_along))
 	{
 		DI_is_actually_free = 1;
 		return;
@@ -449,6 +449,9 @@ void RegRead()
 	if((DI_can_accept_new_bundle)||(DI_is_actually_free))
 	{	
 		RR_can_accept_new_bundle = 1;
+		DI_moved_along = 0;
+		
+		
 		
 		for(int i =0 ;i<WIDTH; i++)
 		{
@@ -583,7 +586,10 @@ void Dispatch()
 				if(recently_issued[j] == pipeline_objects[i].dest_DI)
 					goto label;
 			}
-		
+			
+			DI_moved_along = 1;
+			
+			
 			IQ[IQ_entry_pointer][0] = 1;
 			IQ[IQ_entry_pointer][1] = pipeline_objects[i].dest_DI;
 			

@@ -30,6 +30,7 @@ int DI_can_accept_new_bundle = 1;
 int DI_contains_new_bundle = 0;
 int DI_initial_entry = 1;
 int DI_is_actually_free = 0;
+int DI_moved_along = 0;
 
 int execute_list_has_space = 1;
 
