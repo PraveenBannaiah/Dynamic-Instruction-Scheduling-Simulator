@@ -1,11 +1,13 @@
 **THIS PROJECT WAS COMPLETED UNDER THE GUIDANCE OF DR.ERIC ROTTENBERG AT NC STATE UNIVERSITY** 
 
 **Project Description** 
+ 
   In this project, I have constructed a simulator for an out-of-order superscalar processor that 
   fetches and issues N instructions per cycle. Only the dynamic scheduling mechanism was 
   modeled in detail, i.e., perfect caches and perfect branch prediction are assumed. 
 
 **Traces**
+ 
   The simulator reads a trace file in the following format: 
   <PC> <operation type> <dest reg #> <src1 reg #> <src2 reg #>  
   <PC> <operation type> <dest reg #> <src1 reg #> <src2 reg #>  
@@ -30,9 +32,11 @@
   “operation type 2”  -, R4, R7                    // no destination register!  
 
 **Inputs to the Simulator**
+  
   sim <ROB_SIZE> <IQ_SIZE> <WIDTH> <tracefile> 
 
 **Outputs of the simulator**
+  
   The simulator outputs the following after completion of the run: 
   1. Simulator command. 
   2. Processor configuration.
@@ -42,4 +46,5 @@
     c. Instructions per cycle (IPC). (item a divided by item b, above)
 
 **Pipeline**
+ 
   <img width="462" alt="image" src="https://github.com/user-attachments/assets/c8c51b31-901f-4ee3-952a-47ca7e25c36c" />
